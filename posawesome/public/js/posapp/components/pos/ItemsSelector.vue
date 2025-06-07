@@ -31,41 +31,60 @@
         </v-col>
         <v-col cols="12" class="pt-0 mt-0">
           <div fluid class="items" v-if="items_view == 'card'">
-            <v-row density="default" class="overflow-y-auto dynamic-scroll" 
-                   :style="{ maxHeight: responsiveStyles['--card-height'] }">
-              <v-col v-for="(item, idx) in filtered_items" :key="idx" xl="2" lg="3" md="6" sm="6" cols="6"
-                min-height="50">
-                <v-card hover="hover" @click="add_item(item)" class="dynamic-item-card">
-                  <v-img :src="item.image ||
-                    '/assets/posawesome/js/posapp/components/pos/placeholder-image.png'
-                    " class="text-white align-end" gradient="to bottom, rgba(0,0,0,0), rgba(0,0,0,0.4)" height="100px">
-                    <v-card-text v-text="item.item_name" class="text-caption px-1 pb-0"></v-card-text>
-                  </v-img>
-                  <v-card-text class="text--primary pa-1">
-                    <div class="text-caption text-primary">
-                      {{ currencySymbol(pos_profile.currency) || "" }}
-                      {{ format_currency(item.rate, pos_profile.currency, 4) }}
-                    </div>
-                    <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
-                      class="text-caption text-success">
-                      {{ currencySymbol(selected_currency) || "" }}
-                      {{ format_currency(getConvertedRate(item), selected_currency, 4) }}
-                    </div>
-                    <div class="text-caption golden--text">
-                      {{ format_number(item.actual_qty, 4) || 0 }}
-                      {{ item.stock_uom || "" }}
-                    </div>
-                  </v-card-text>
-                </v-card>
-              </v-col>
-            </v-row>
+            <div class="dynamic-grid-container overflow-y-auto" 
+                 :style="{
+                   maxHeight: responsiveStyles['--scroll-height'],
+                   display: 'grid',
+                   gridTemplateColumns: `repeat(${responsiveStyles['--items-per-row']}, 1fr)`,
+                   gap: responsiveStyles['--grid-gap'],
+                   padding: responsiveStyles['--dynamic-sm']
+                 }">
+              <v-card v-for="(item, idx) in optimizedFilteredItems" :key="idx" 
+                      hover @click="add_item(item)" 
+                      class="dynamic-item-card"
+                      :style="{
+                        width: responsiveStyles['--item-width'],
+                        minHeight: responsiveStyles['--item-min-height'],
+                        maxHeight: responsiveStyles['--item-max-height']
+                      }">
+                <v-img :src="item.image || '/assets/posawesome/js/posapp/components/pos/placeholder-image.png'" 
+                       class="text-white align-end" 
+                       gradient="to bottom, rgba(0,0,0,0), rgba(0,0,0,0.4)" 
+                       :height="`${Math.round(parseInt(responsiveStyles['--item-height']) * 0.6)}px`">
+                  <v-card-text v-text="item.item_name" 
+                               class="text-caption px-1 pb-0"
+                               :style="{ fontSize: `${0.75 * parseFloat(responsiveStyles['--font-scale'])}rem` }"></v-card-text>
+                </v-img>
+                <v-card-text class="text--primary pa-1" 
+                             :style="{ fontSize: `${0.7 * parseFloat(responsiveStyles['--font-scale'])}rem` }">
+                  <div class="text-caption text-primary">
+                    {{ currencySymbol(pos_profile.currency) || "" }}
+                    {{ format_currency(item.rate, pos_profile.currency, 4) }}
+                  </div>
+                  <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
+                    class="text-caption text-success">
+                    {{ currencySymbol(selected_currency) || "" }}
+                    {{ format_currency(getConvertedRate(item), selected_currency, 4) }}
+                  </div>
+                  <div class="text-caption golden--text">
+                    {{ format_number(item.actual_qty, 4) || 0 }}
+                    {{ item.stock_uom || "" }}
+                  </div>
+                </v-card-text>
+              </v-card>
+            </div>
           </div>
           <div fluid class="items" v-if="items_view == 'list'">
             <div class="my-0 py-0 overflow-y-auto dynamic-scroll" 
-                 :style="{ maxHeight: responsiveStyles['--card-height'] }">
-              <v-data-table :headers="getItemsHeaders()" :items="filtered_items" item-key="item_code" item-value="item-"
-                class="elevation-0 sleek-data-table" :items-per-page="itemsPerPage" hide-default-footer
-                @click:row="click_item_row">
+                 :style="{ maxHeight: responsiveStyles['--scroll-height'] }">
+              <v-data-table :headers="getItemsHeaders()" 
+                            :items="optimizedFilteredItems" 
+                            item-key="item_code" 
+                            item-value="item-"
+                            class="elevation-0 sleek-data-table" 
+                            :items-per-page="dynamicItemsPerPage" 
+                            hide-default-footer
+                            @click:row="click_item_row">
 
                 <template v-slot:item.rate="{ item }">
                   <div>
@@ -179,6 +198,43 @@ export default {
     },
     new_line() {
       this.eventBus.emit("set_new_line", this.new_line);
+    },
+  },
+
+  computed: {
+    // Enhanced filtered items with dynamic count
+    optimizedFilteredItems() {
+      const baseFiltered = this.getBaseFilteredItems();
+      const optimalCount = this.getOptimalItemCount();
+      
+      // Use dynamic count instead of fixed 50
+      const dynamicLimit = Math.max(optimalCount, 20); // Minimum 20 items
+      
+      return baseFiltered.slice(0, dynamicLimit);
+    },
+    
+    // Dynamic items per page for list view
+    dynamicItemsPerPage() {
+      if (this.items_view === 'list') {
+        const itemHeight = 60; // Approximate row height
+        const availableHeight = parseInt(this.responsiveStyles['--scroll-height']);
+        return Math.max(Math.floor(availableHeight / itemHeight), 10);
+      }
+      return this.getOptimalItemCount();
+    },
+    
+    // Legacy computed property for backward compatibility
+    filtered_items() {
+      return this.optimizedFilteredItems;
+    },
+    
+    debounce_search: {
+      get() {
+        return this.first_search;
+      },
+      set: _.debounce(function (newValue) {
+        this.first_search = newValue;
+      }, 200),
     },
   },
 
@@ -872,63 +928,14 @@ export default {
       this.trigger_onscan(scannedCode);
     },
 
-    getConvertedRate(item) {
-      if (!item.rate) return 0;
-      if (!this.exchange_rate) return item.rate;
-
-      // If exchange rate is 300 PKR = 1 USD
-      // To convert PKR to USD: divide by exchange rate
-      // Example: 3000 PKR / 300 = 10 USD
-      const convertedRate = item.rate / this.exchange_rate;
-      return this.flt(convertedRate, 4);
-    },
-    currencySymbol(currency) {
-      return get_currency_symbol(currency);
-    },
-    format_currency(value, currency, precision) {
-      if (!value) return '0';
-
-      // Convert to string for checking decimal points
-      let valueStr = value.toString();
-
-      // If value has decimal points, show 4 decimal places
-      if (valueStr.includes('.')) {
-        return flt(value, 4).toString();
-      }
-
-      // For whole numbers, return as is
-      return valueStr;
-    },
-    format_number(value, precision) {
-      if (!value) return '0';
-
-      // Convert to string for checking decimal points
-      let valueStr = value.toString();
-
-      // If value has decimal points, show 4 decimal places
-      if (valueStr.includes('.')) {
-        return flt(value, 4).toString();
-      }
-
-      // For whole numbers, return as is
-      return valueStr;
-    },
-    hasDecimalPrecision(value) {
-      // Check if the value has any decimal precision when multiplied by exchange rate
-      if (this.exchange_rate && this.exchange_rate !== 1) {
-        let convertedValue = value * this.exchange_rate;
-        return !Number.isInteger(convertedValue);
-      }
-      return !Number.isInteger(value);
-    },
-  },
-
-  computed: {
-    filtered_items() {
+    // Base filtering logic (extracted from original filtered_items)
+    getBaseFilteredItems() {
       this.search = this.get_search(this.first_search);
       if (!this.pos_profile.pose_use_limit_search) {
         let filtred_list = [];
         let filtred_group_list = [];
+        
+        // Group filtering
         if (this.item_group != "ALL") {
           filtred_group_list = this.items.filter((item) =>
             item.item_group
@@ -938,26 +945,26 @@ export default {
         } else {
           filtred_group_list = this.items;
         }
+        
+        // Search filtering
         if (!this.search || this.search.length < 3) {
           let filtered = [];
           if (
             this.pos_profile.posa_show_template_items &&
             this.pos_profile.posa_hide_variants_items
           ) {
-            filtered = filtred_group_list
-              .filter((item) => !item.variant_of)
-              .slice(0, 50);
+            filtered = filtred_group_list.filter((item) => !item.variant_of);
           } else {
-            filtered = filtred_group_list.slice(0, 50);
+            filtered = filtred_group_list;
           }
-
+          
           // Ensure quantities are defined
           filtered.forEach(item => {
             if (item.actual_qty === undefined) {
               item.actual_qty = 0;
             }
           });
-
+          
           return filtered;
         } else if (this.search) {
           filtred_list = filtred_group_list.filter((item) => {
@@ -1029,52 +1036,115 @@ export default {
             }
           }
         }
-
+        
         let final_filtered_list = [];
         if (
           this.pos_profile.posa_show_template_items &&
           this.pos_profile.posa_hide_variants_items
         ) {
-          final_filtered_list = filtred_list.filter((item) => !item.variant_of).slice(0, 50);
+          final_filtered_list = filtred_list.filter((item) => !item.variant_of);
         } else {
-          final_filtered_list = filtred_list.slice(0, 50);
+          final_filtered_list = filtred_list;
         }
-
+        
         // Ensure quantities are defined for each item
         final_filtered_list.forEach(item => {
           if (item.actual_qty === undefined) {
             item.actual_qty = 0;
           }
         });
-
+        
         // Force request quantity update for filtered items
         if (final_filtered_list.length > 0) {
           setTimeout(() => {
             this.update_items_details(final_filtered_list);
           }, 100);
         }
-
+        
         return final_filtered_list;
       } else {
-        const items_list = this.items.slice(0, 50);
-
+        const items_list = this.items;
+        
         // Ensure quantities are defined
         items_list.forEach(item => {
           if (item.actual_qty === undefined) {
             item.actual_qty = 0;
           }
         });
-
+        
         return items_list;
       }
     },
-    debounce_search: {
-      get() {
-        return this.first_search;
-      },
-      set: _.debounce(function (newValue) {
-        this.first_search = newValue;
-      }, 200),
+    
+    // Get optimal item count based on screen size and view mode
+    getOptimalItemCount() {
+      if (!this.responsiveStyles) return 50;
+      
+      const itemsPerRow = parseInt(this.responsiveStyles['--items-per-row']) || 6;
+      const availableHeight = parseInt(this.responsiveStyles['--scroll-height']) || 400;
+      
+      if (this.items_view === 'card') {
+        const itemHeight = parseInt(this.responsiveStyles['--item-height']) || 150;
+        const rowsVisible = Math.floor(availableHeight / itemHeight);
+        const bufferRows = 2; // Load 2 extra rows for smooth scrolling
+        return Math.max((rowsVisible + bufferRows) * itemsPerRow, 20);
+      } else {
+        // List view
+        const rowHeight = 60;
+        const rowsVisible = Math.floor(availableHeight / rowHeight);
+        const bufferRows = 5;
+        return Math.max(rowsVisible + bufferRows, 20);
+      }
+    },
+
+    getConvertedRate(item) {
+      if (!item.rate) return 0;
+      if (!this.exchange_rate) return item.rate;
+
+      // If exchange rate is 300 PKR = 1 USD
+      // To convert PKR to USD: divide by exchange rate
+      // Example: 3000 PKR / 300 = 10 USD
+      const convertedRate = item.rate / this.exchange_rate;
+      return this.flt(convertedRate, 4);
+    },
+    currencySymbol(currency) {
+      return get_currency_symbol(currency);
+    },
+    format_currency(value, currency, precision) {
+      if (!value) return '0';
+
+      // Convert to string for checking decimal points
+      let valueStr = value.toString();
+
+      // If value has decimal points, show 4 decimal places
+      if (valueStr.includes('.')) {
+        return flt(value, 4).toString();
+      }
+
+      // For whole numbers, return as is
+      return valueStr;
+    },
+    format_number(value, precision) {
+      if (!value) return '0';
+
+      // Convert to string for checking decimal points
+      let valueStr = value.toString();
+
+      // If value has decimal points, show 4 decimal places
+      if (valueStr.includes('.')) {
+        return flt(value, 4).toString();
+      }
+
+      // For whole numbers, return as is
+      return valueStr;
+    },
+    hasDecimalPrecision(value) {
+      // Check if the value has any decimal precision when multiplied by exchange rate
+      if (this.exchange_rate && this.exchange_rate !== 1) {
+        let convertedValue = value * this.exchange_rate;
+        return !Number.isInteger(convertedValue);
+      }
+      return !Number.isInteger(value);
     },
   },
 
@@ -1163,13 +1233,19 @@ export default {
   transition: max-height 0.3s ease;
 }
 
-.dynamic-item-card {
-  margin: var(--dynamic-xs);
+.dynamic-grid-container {
   transition: all 0.3s ease;
 }
 
+.dynamic-item-card {
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
 .dynamic-item-card:hover {
-  transform: scale(calc(1 + 0.02 * var(--font-scale)));
+  transform: scale(var(--hover-scale));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .text-success {
@@ -1188,16 +1264,31 @@ export default {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
 }
 
-/* Responsive breakpoints */
+/* Responsive grid adjustments */
 @media (max-width: 768px) {
   .dynamic-padding {
     padding: var(--dynamic-sm) var(--dynamic-xs);
+  }
+  
+  .dynamic-grid-container {
+    padding: var(--dynamic-xs);
   }
 }
 
 @media (max-width: 480px) {
   .dynamic-padding {
     padding: var(--dynamic-xs);
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) {
+  .dynamic-item-card:hover {
+    transform: none;
+  }
+  
+  .dynamic-item-card:active {
+    transform: scale(0.98);
   }
 }
 </style>

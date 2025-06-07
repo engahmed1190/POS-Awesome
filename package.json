@@ -1,12 +1,12 @@
 {
-
   "name": "posawesome",
   "scripts": {
     "dev": "vite",
     "prebuild": "npm install"
-
   },
   "dependencies": {
+    "@mdi/font": "^7.4.47",
+    "dexie": "^3.2.4",
     "lodash": "^4.17.21",
     "mitt": "^3.0.1",
     "socket.io-client": "^4.8.1",
