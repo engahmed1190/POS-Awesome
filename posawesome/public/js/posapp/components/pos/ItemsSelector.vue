@@ -36,16 +36,25 @@
           </v-col>
           <v-col cols="12" class="pt-0 mt-0">
             <div fluid class="items" v-if="items_view == 'card'">
-              <RecycleScroller :items="filtered_items" :item-size="220" key-field="item_code"
-                class="overflow-y-auto dynamic-scroll"
-                :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }">
-                <template #default="{ item }">
-                  <v-col xl="2" lg="3" md="6" sm="6" cols="6" min-height="50">
-                    <v-card hover="hover" @click="add_item(item)" class="dynamic-item-card">
-                      <v-img :src="item.image ||
-                        '/assets/posawesome/js/posapp/components/pos/placeholder-image.png'
-                        " class="text-white align-end" gradient="to bottom, rgba(0,0,0,0), rgba(0,0,0,0.4)"
-                        height="100px">
+              <div class="overflow-y-auto dynamic-scroll" :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }">
+                <v-row>
+                  <v-col 
+                    v-for="item in filtered_items" 
+                    :key="item.item_code"
+                    xl="2" 
+                    lg="3" 
+                    md="6" 
+                    sm="6" 
+                    cols="6" 
+                    class="d-flex"
+                  >
+                    <v-card hover @click="add_item(item)" class="dynamic-item-card flex-fill">
+                      <v-img 
+                        :src="item.image || '/assets/posawesome/js/posapp/components/pos/placeholder-image.png'" 
+                        class="text-white align-end" 
+                        gradient="to bottom, rgba(0,0,0,0), rgba(0,0,0,0.4)"
+                        height="100px"
+                      >
                         <v-card-text v-text="item.item_name" class="text-caption px-1 pb-0"></v-card-text>
                       </v-img>
                       <v-card-text class="text--primary pa-1">
@@ -56,8 +65,7 @@
                         <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
                           class="text-caption text-success">
                           {{ currencySymbol(selected_currency) || "" }}
-                          {{ format_currency(getConvertedRate(item), selected_currency,
-                            ratePrecision(getConvertedRate(item))) }}
+                          {{ format_currency(getConvertedRate(item), selected_currency, ratePrecision(getConvertedRate(item))) }}
                         </div>
                         <div class="text-caption golden--text">
                           {{ format_number(item.actual_qty, 4) || 0 }}
@@ -66,8 +74,8 @@
                       </v-card-text>
                     </v-card>
                   </v-col>
-                </template>
-              </RecycleScroller>
+                </v-row>
+              </div>
             </div>
             <div v-else>
               <v-data-table-virtual :headers="headers" :items="filtered_items" class="sleek-data-table overflow-y-auto"
