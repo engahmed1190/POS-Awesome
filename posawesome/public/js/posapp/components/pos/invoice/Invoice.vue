@@ -107,18 +107,18 @@
 
 import format from "../../format";
 import Customer from "./Customer.vue";
-import DeliveryCharges from "./DeliveryCharges.vue";
-import PostingDateRow from "./PostingDateRow.vue";
-import MultiCurrencyRow from "./MultiCurrencyRow.vue";
-import CancelSaleDialog from "./CancelSaleDialog.vue";
+import DeliveryCharges from "../DeliveryCharges.vue";
+import PostingDateRow from "../PostingDateRow.vue";
+import MultiCurrencyRow from "../MultiCurrencyRow.vue";
+import CancelSaleDialog from "../CancelSaleDialog.vue";
 import InvoiceSummary from "./InvoiceSummary.vue";
 import ItemsTable from "./ItemsTable.vue";
-import invoiceComputed from "./invoiceComputed";
-import invoiceWatchers from "./invoiceWatchers";
-import itemMethods from "./invoiceItemMethods";
-import offerMethods from "./invoiceOfferMethods";
-import shortcutMethods from "./invoiceShortcuts";
-import { isOffline, saveCustomerBalance, getCachedCustomerBalance } from "../../../offline";
+import invoiceComputed from "../../../mixins/invoiceComputed";
+import invoiceWatchers from "../../../mixins/invoiceWatchers";
+import itemMethods from "../../../mixins/invoiceItemMethods";
+import offerMethods from "../../../mixins/invoiceOfferMethods";
+import shortcutMethods from "../../../mixins/invoiceShortcuts";
+import { isOffline, saveCustomerBalance, getCachedCustomerBalance } from "../../../../offline";
 
 export default {
   name: 'POSInvoice',

@@ -1,4 +1,4 @@
-import { silentPrint } from "../../plugins/print.js";
+import { silentPrint } from "../plugins/print.js";
 
 export default {
     checkOfferIsAppley(item, offer) {
