@@ -301,10 +301,10 @@
 // This import is crucial for the server connectivity indicator.
 import { io } from 'socket.io-client';
 
-import { getPendingOfflineInvoiceCount, syncOfflineInvoices, isOffline, getLastSyncTotals, isManualOffline, setManualOffline, clearAllCache } from '../../offline/index.js';
+import { getPendingOfflineInvoiceCount, syncOfflineInvoices, isOffline, getLastSyncTotals, isManualOffline, setManualOffline, clearAllCache } from '../../../offline/index.js';
 
-import OfflineInvoicesDialog from './OfflineInvoices.vue';
-import { silentPrint } from '../plugins/print.js';
+import OfflineInvoicesDialog from '../offline-invoices/OfflineInvoices.vue';
+import { silentPrint } from '../../plugins/print.js';
 
 export default {
   name: 'NavBar', // Component name

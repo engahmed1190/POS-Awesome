@@ -32,17 +32,17 @@
 <script>
 
 import ItemsSelector from './ItemsSelector.vue';
-import Invoice from './Invoice.vue';
+import Invoice from './invoice/Invoice.vue';
 import OpeningDialog from './OpeningDialog.vue';
 import Payments from './Payments.vue';
 import PosOffers from './PosOffers.vue';
 import PosCoupons from './PosCoupons.vue';
 import Drafts from './Drafts.vue';
-import SalesOrders from "./SalesOrders.vue";
+import SalesOrders from "./orders/SalesOrders.vue";
 import ClosingDialog from './ClosingDialog.vue';
 import NewAddress from './NewAddress.vue';
 import Variants from './Variants.vue';
-import Returns from './Returns.vue';
+import Returns from './returns/Returns.vue';
 import MpesaPayments from './Mpesa-Payments.vue';
 import { getCachedOffers, saveOffers, getOpeningStorage, setOpeningStorage, clearOpeningStorage, initPromise } from '../../../offline/index.js';
 // Import the cache cleanup function

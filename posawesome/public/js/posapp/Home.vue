@@ -8,9 +8,9 @@
 </template>
 
 <script>
-import Navbar from './components/Navbar.vue';
+import Navbar from './components/navbar/Navbar.vue';
 import POS from './components/pos/Pos.vue';
-import Payments from './components/payments/Pay.vue';
+import Payments from './components/payments/PaymentMethods.vue';
 
 export default {
   data: function () {
