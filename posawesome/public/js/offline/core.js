@@ -60,22 +60,33 @@ function flushPersistQueue() {
 }
 
 export function persist(key, value) {
-	if (persistWorker) {
-		persistWorker.postMessage({ type: "persist", key, value });
-		return;
-	}
-	
-	db.table("keyval")
-		.put({ key, value })
-		.catch((e) => console.error(`Failed to persist ${key}`, e));
+        let clean = value;
+        try {
+                clean = JSON.parse(JSON.stringify(value));
+        } catch (e) {
+                console.error("Failed to serialize", key, e);
+        }
 
-	if (typeof localStorage !== "undefined") {
-		try {
-			localStorage.setItem(`posa_${key}`, JSON.stringify(value));
-		} catch (err) {
-			console.error("Failed to persist", key, "to localStorage", err);
-		}
-	}
+        if (persistWorker) {
+                try {
+                        persistWorker.postMessage({ type: "persist", key, value: clean });
+                        return;
+                } catch (err) {
+                        console.error("Worker postMessage failed", err);
+                }
+        }
+
+        db.table("keyval")
+                .put({ key, value: clean })
+                .catch((e) => console.error(`Failed to persist ${key}`, e));
+
+        if (typeof localStorage !== "undefined") {
+                try {
+                        localStorage.setItem(`posa_${key}`, JSON.stringify(clean));
+                } catch (err) {
+                        console.error("Failed to persist", key, "to localStorage", err);
+                }
+        }
 }
 
 export const initPromise = new Promise((resolve) => {
