@@ -301,6 +301,10 @@ export default {
 </script>
 
 <style scoped>
+/* Container padding for better spacing */
+.items-table-container {
+  padding: var(--dynamic-sm);
+}
 /* Modern table styling with enhanced visual hierarchy */
 .modern-items-table {
   border-radius: var(--border-radius-lg);
@@ -328,7 +332,7 @@ export default {
   font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  padding: 12px 16px;
+  padding: var(--dynamic-sm) var(--dynamic-md);
   transition: background-color var(--transition-normal);
   border-bottom: 2px solid var(--table-header-border);
   background-color: var(--table-header-bg);
@@ -352,7 +356,7 @@ export default {
 
 /* Table cell styling */
 .modern-items-table :deep(td) {
-  padding: 12px 16px;
+  padding: var(--dynamic-sm) var(--dynamic-md);
   vertical-align: middle;
 }
 

@@ -67,7 +67,8 @@
           <v-col cols="12" class="pt-0 mt-0">
             <div fluid class="items-grid dynamic-scroll" ref="itemsContainer" v-if="items_view == 'card'"
               :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }">
-              <v-card v-for="item in filtered_items" :key="item.item_code" hover class="dynamic-item-card"
+              <v-card v-for="item in filtered_items" :key="item.item_code" hover
+                :class="['dynamic-item-card', { 'dragging-item': draggedItemCode === item.item_code }]"
                 :draggable="true"
                 @dragstart="onDragStart($event, item)"
                 @dragend="onDragEnd"
@@ -222,6 +223,7 @@ export default {
     hide_zero_rate_items: false,
     temp_hide_zero_rate_items: false,
     isDragging: false,
+    draggedItemCode: null,
     // Track if the current search was triggered by a scanner
     search_from_scanner: false,
   }),
@@ -1483,6 +1485,7 @@ export default {
     },
     onDragStart(event, item) {
       this.isDragging = true;
+      this.draggedItemCode = item.item_code;
       
       // Set drag data
       event.dataTransfer.setData('application/json', JSON.stringify({
@@ -1498,6 +1501,7 @@ export default {
     },
     onDragEnd(event) {
       this.isDragging = false;
+      this.draggedItemCode = null;
       
       // Emit event to hide drop feedback
       this.eventBus.emit('item-drag-end');
@@ -1862,16 +1866,20 @@ export default {
   gap: var(--dynamic-sm);
   align-items: start;
   align-content: start;
+  padding: var(--dynamic-xs);
 }
 
 .dynamic-item-card {
   margin: var(--dynamic-xs);
+  padding: var(--dynamic-sm);
   transition: var(--transition-normal);
   background-color: var(--surface-secondary);
   display: flex;
   flex-direction: column;
   height: auto;
   box-sizing: border-box;
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-sm);
 }
 
 .dynamic-item-card .v-img {
@@ -1880,6 +1888,11 @@ export default {
 
 .dynamic-item-card:hover {
   transform: scale(calc(1 + 0.02 * var(--font-scale)));
+}
+
+.dragging-item {
+  opacity: 0.7;
+  box-shadow: var(--shadow-md);
 }
 
 .text-success {
