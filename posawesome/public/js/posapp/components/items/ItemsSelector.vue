@@ -1847,6 +1847,12 @@ export default {
 <style scoped>
 .dynamic-card {
   composes: pos-card;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition-normal);
+}
+
+.dynamic-card:hover {
+  box-shadow: var(--shadow-md);
 }
 
 .dynamic-padding {
@@ -1863,10 +1869,10 @@ export default {
 .items-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: var(--dynamic-sm);
+  gap: var(--dynamic-md);
   align-items: start;
   align-content: start;
-  padding: var(--dynamic-xs);
+  padding: var(--dynamic-sm);
 }
 
 .dynamic-item-card {
@@ -1901,7 +1907,8 @@ export default {
 
 .sleek-data-table {
   composes: pos-table;
-  margin: var(--dynamic-xs);
+  margin: var(--dynamic-sm);
+  transition: var(--transition-normal);
 }
 
 .sleek-data-table:hover {

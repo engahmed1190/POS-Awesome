@@ -4,7 +4,7 @@
     @dragover="onDragOverFromSelector($event)" @drop="onDropFromSelector($event)" @dragenter="onDragEnterFromSelector"
     @dragleave="onDragLeaveFromSelector">
     <v-data-table-virtual :headers="headers" :items="items" :theme="$theme.current" :expanded="expanded" show-expand
-      item-value="posa_row_id" class="modern-items-table elevation-2" :items-per-page="itemsPerPage" expand-on-click
+      item-value="posa_row_id" class="modern-items-table" :items-per-page="itemsPerPage" expand-on-click
       density="compact" hide-default-footer :single-expand="true" :header-props="headerProps"
       @update:expanded="$emit('update:expanded', $event)" :search="itemSearch">
 
@@ -307,20 +307,15 @@ export default {
 }
 /* Modern table styling with enhanced visual hierarchy */
 .modern-items-table {
-  border-radius: var(--border-radius-lg);
-  overflow: hidden;
+  composes: pos-table;
   box-shadow: var(--shadow-md);
-  border: 1px solid rgba(0, 0, 0, 0.09);
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  transition: all 0.3s ease;
+  transition: var(--transition-normal);
 }
 
 /* Table wrapper styling */
 .modern-items-table :deep(.v-data-table__wrapper),
 .modern-items-table :deep(.v-table__wrapper) {
-  border-radius: var(--border-radius-sm);
   height: 100%;
   overflow-y: auto;
   scrollbar-width: thin;
@@ -328,30 +323,17 @@ export default {
 
 /* Table header styling */
 .modern-items-table :deep(th) {
-  font-weight: 600;
-  font-size: 0.9rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
   padding: var(--dynamic-sm) var(--dynamic-md);
-  transition: background-color var(--transition-normal);
-  border-bottom: 2px solid var(--table-header-border);
-  background-color: var(--table-header-bg);
-  color: var(--table-header-text);
-  position: sticky;
-  top: 0;
-  z-index: 1;
 }
 
 /* Table row styling */
 .modern-items-table :deep(tr) {
-  transition: all 0.2s ease;
+  transition: var(--transition-fast);
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .modern-items-table :deep(tr:hover) {
   background-color: var(--table-row-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
 
 /* Table cell styling */
