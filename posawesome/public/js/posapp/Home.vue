@@ -452,7 +452,7 @@ export default {
 .page-content {
   flex: 1;
   overflow-y: auto;
-  padding-top: 8px;
+  padding-top: 4px;
 }
 
 /* Ensure proper spacing and prevent layout shifts */
