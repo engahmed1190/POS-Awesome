@@ -7,7 +7,7 @@ export async function ensurePosProfile() {
 	}
 	try {
 		const res = await frappe.call({
-			method: "posawesome.posawesome.api.utils.get_active_pos_profile",
+			method: "posawesome.posawesome.api.profile.get_profile",
 			args: { user: frappe.session.user },
 		});
 		if (res.message) {

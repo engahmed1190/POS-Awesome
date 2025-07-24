@@ -34,9 +34,10 @@ app_include_js = [
 
 # include js in doctype views
 doctype_js = {
-	"POS Profile": "posawesome/api/pos_profile.js",
-	"Sales Invoice": "posawesome/api/invoice.js",
-	"Company": "posawesome/api/company.js",
+        "POS Profile": "posawesome/api/pos_profile.js",
+        "Standalone POS Profile": "posawesome/doctype/standalone_pos_profile/standalone_pos_profile.js",
+        "Sales Invoice": "posawesome/api/invoice.js",
+        "Company": "posawesome/api/company.js",
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
