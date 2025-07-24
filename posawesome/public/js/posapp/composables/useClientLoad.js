@@ -6,7 +6,7 @@ export function useClientLoad(
 ) {
     // Basic lag
     const cpuLag = ref(0);
-    const lagHistory = ref([]);
+    const history = ref([]); // renamed from lagHistory for consistency
 
     // Long‑tasks
     const longTasks = ref([]);
@@ -30,9 +30,9 @@ export function useClientLoad(
         cpuLag.value = Math.max(0, lag);
         last = now;
 
-        lagHistory.value.push(cpuLag.value);
-        if (lagHistory.value.length > windowSize) {
-            lagHistory.value.shift();
+        history.value.push(cpuLag.value);
+        if (history.value.length > windowSize) {
+            history.value.shift();
         }
     }
 
@@ -93,7 +93,7 @@ export function useClientLoad(
 
     return {
         cpuLag,
-        lagHistory,
+        history,
         longTasks,
         memoryUsage,
         device,

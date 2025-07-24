@@ -3,20 +3,17 @@
     <v-tooltip location="bottom">
       <template #activator="{ props }">
         <div v-bind="props" class="cpu-meter-container">
-          <v-icon size="22" color="primary">mdi-server</v-icon>
+          <v-icon size="22" color="success">mdi-chip</v-icon>
           <span class="cpu-current-lag">{{ cpuLag.toFixed(1) }} ms</span>
         </div>
       </template>
       <div class="cpu-tooltip-content">
-        <div class="cpu-tooltip-title">
-          <v-icon size="16" color="primary" class="mr-1">mdi-server</v-icon>
-          {{ __("Server Health") }}
-        </div>
-        <v-divider class="my-2" />
-        <div class="cpu-tooltip-section-title mb-1">{{ __("Server Metrics") }}</div>
+        <div class="cpu-tooltip-title">{{ __("CPU Load") }}</div>
         <div class="cpu-tooltip-peak mb-1">
           <v-icon size="14" color="success" class="mr-1">mdi-arrow-up-bold</v-icon>
-          {{ __("Peak: ") }}<b>{{ peakLag.toFixed(1) }} ms</b> ({{ peakPercent }}%)
+          {{ __("Peak:") }}
+          <b>{{ peakLag.toFixed(1) }} ms</b>
+          ({{ peakPercent }}%)
         </div>
         <div class="cpu-tooltip-sparkline mb-2">
           <svg :width="180" :height="40" class="cpu-sparkline-large">
@@ -40,7 +37,6 @@
           </svg>
         </div>
         <div class="cpu-tooltip-detail">
-          <v-icon size="14" color="primary" class="mr-1">mdi-chip</v-icon>
           {{ __("Current Event Loop Lag:") }} <b>{{ cpuLag.toFixed(1) }}</b> ms
         </div>
         <div v-if="cpuLag >= 80" class="cpu-tooltip-warning">
@@ -51,12 +47,10 @@
         <div v-else-if="serverError" class="cpu-tooltip-warning">{{ serverError }}</div>
         <div v-else>
           <div class="cpu-tooltip-detail">
-            <v-icon size="14" color="primary" class="mr-1">mdi-chip</v-icon>
             {{ __("Server CPU Usage:") }} <b>{{ serverCpu !== null ? serverCpu.toFixed(1) + '%' : 'N/A' }}</b>
             <span class="ml-2">{{ __("Peak Server:") }} <b>{{ serverPeak.toFixed(1) }}%</b></span>
           </div>
           <div class="cpu-tooltip-detail">
-            <v-icon size="14" color="primary" class="mr-1">mdi-memory</v-icon>
             {{ __("Server Memory Usage:") }}
             <b>{{ serverMemory !== null ? serverMemory.toFixed(1) + '%' : 'N/A' }}</b>
             <span class="ml-2">{{ __("Peak Memory:") }} <b>{{ serverMemoryPeak.toFixed(1) }}%</b></span>
@@ -68,32 +62,14 @@
             <span class="cpu-bar-label">{{ serverMemory !== null ? serverMemory.toFixed(1) + '%' : 'N/A' }}</span>
           </div>
           <div class="cpu-tooltip-detail">
-            <v-icon size="14" color="primary" class="mr-1">mdi-database</v-icon>
             {{ __("Total:") }} <b>{{ formatBytes(memoryTotal) }}</b>
             <span class="ml-2">{{ __("Used:") }} <b>{{ formatBytes(memoryUsed) }}</b></span>
             <span class="ml-2">{{ __("Available:") }} <b>{{ formatBytes(memoryAvailable) }}</b></span>
           </div>
           <div class="cpu-tooltip-detail">
-            <v-icon size="14" color="primary" class="mr-1">mdi-timer-outline</v-icon>
             {{ __("Server Uptime:") }} <b>{{ formatUptime(serverUptime) }}</b>
           </div>
         </div>
-        <v-divider class="my-2" />
-        <div class="cpu-tooltip-section-title mb-1">{{ __("Client Metrics") }}</div>
-        <div class="cpu-tooltip-detail">
-          <v-icon size="14" color="primary" class="mr-1">mdi-monitor</v-icon>
-          {{ __("Client CPU Lag:") }} <b>{{ cpuLag.toFixed(1) }}</b> ms
-        </div>
-        <div class="cpu-tooltip-detail">
-          <v-icon size="14" color="primary" class="mr-1">mdi-memory</v-icon>
-          {{ __("Client Memory Usage:") }} <b>{{ formatBytes(memoryUsage) }}</b>
-        </div>
-        <div class="cpu-tooltip-detail">
-          <v-icon size="14" color="primary" class="mr-1">mdi-chip</v-icon>
-          {{ __("CPU Cores:") }} <b>{{ device.cores }}</b>
-          <span v-if="device.gbMemory" class="ml-2">{{ __("Device Memory:") }} <b>{{ device.gbMemory }} GB</b></span>
-        </div>
-        <v-divider class="my-2" />
         <div class="cpu-tooltip-tip mt-2">
           <v-icon size="14" color="primary" class="mr-1">mdi-lightbulb-on-outline</v-icon>
           {{ __("Tip: Close unused tabs or apps to reduce lag.") }}
@@ -113,10 +89,10 @@
 
 <script setup lang="ts">
 import { computed, inject } from "vue";
-import { useClientLoad } from "../../composables/useClientLoad";
-import { useServerStats } from "../../composables/useServerStats";
+import { useCpuLoad } from "../../composables/useCpuLoad";
+import { useServerCpu } from "../../composables/useServerCpu";
 
-const { cpuLag, lagHistory, longTasks, memoryUsage, device } = useClientLoad(1000, 60);
+const { cpuLag, history } = useCpuLoad(1000, 60);
 const __ = inject("__", (txt: string) => txt);
 
 // Use the composable for server CPU and memory
@@ -129,7 +105,7 @@ const {
   history: serverHistory,
   loading: serverLoading,
   error: serverError
-} = useServerStats(10000, 60);
+} = useServerCpu(10000, 60);
 
 const serverPeak = computed(() => Math.max(...serverHistory.value.map(h => h.cpu ?? 0), 0));
 const serverMemoryPeak = computed(() => Math.max(...serverHistory.value.map(h => h.memory ?? 0), 0));
@@ -186,11 +162,11 @@ function getAreaPoints(arr: number[], w: number, h: number) {
   return points;
 }
 
-const sparklinePointsLarge = computed(() => getSparklinePoints(lagHistory.value, 180, 40));
-const areaPointsLarge = computed(() => getAreaPoints(lagHistory.value, 180, 40));
+const sparklinePointsLarge = computed(() => getSparklinePoints(history.value, 180, 40));
+const areaPointsLarge = computed(() => getAreaPoints(history.value, 180, 40));
 
 // Peak lag in ms and as a percentage (100ms = 100%)
-const peakLag = computed(() => Math.max(...lagHistory.value, 0));
+const peakLag = computed(() => Math.max(...history.value, 0));
 const peakPercent = computed(() => Math.round(Math.min(peakLag.value, 100)));
 </script>
 
@@ -364,12 +340,5 @@ const peakPercent = computed(() => Math.round(Math.min(peakLag.value, 100)));
 :deep(.dark-theme) .cpu-tooltip-action,
 :deep(.v-theme--dark) .cpu-tooltip-action {
   color: #fff !important;
-}
-.cpu-tooltip-section-title {
-  font-weight: 600;
-  font-size: 13px;
-  margin-bottom: 4px;
-  color: var(--primary);
-  opacity: 0.85;
 }
 </style> 

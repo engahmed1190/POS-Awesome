@@ -21,7 +21,7 @@
 			hide-default-footer
 			:single-expand="true"
 			:header-props="headerProps"
-			@update:expanded="$emit('update:expanded', $event)"
+                        @update:expanded="val => $emit('update:expanded', val.map(v => typeof v === 'object' ? v.posa_row_id : v))"
 			:search="itemSearch"
 		>
 			<!-- Quantity column -->

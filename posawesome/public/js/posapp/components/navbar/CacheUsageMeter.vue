@@ -19,8 +19,8 @@
             <v-icon size="14" color="info" class="mr-1">mdi-database-clock</v-icon>
             {{ __("Cache Usage") }}
           </div>
-          <v-divider class="my-2" />
-          <div class="cache-tooltip-section-title mb-1">{{ __("Usage") }}</div>
+        <v-divider class="my-2" />
+        <div class="cache-tooltip-section-title mb-1">{{ __("Usage") }}</div>
         <div class="cache-tooltip-bar mb-2">
           <div class="cache-bar-bg">
             <div
@@ -32,16 +32,16 @@
             <span class="cache-bar-max">100%</span>
           </div>
         </div>
-				<div v-if="!cacheUsageLoading">
-            <div class="cache-tooltip-section-title mb-1">{{ __("Breakdown") }}</div>
-            <div class="cache-tooltip-detail"><v-icon size="14" color="info" class="mr-1">mdi-database-clock</v-icon>{{ __("Total Size") }}: <b>{{ formatBytes(cacheUsageDetails.total) }}</b></div>
-            <div class="cache-tooltip-detail"><v-icon size="14" color="info" class="mr-1">mdi-database</v-icon>{{ __("IndexedDB") }}: <b>{{ formatBytes(cacheUsageDetails.indexedDB) }}</b></div>
-            <div class="cache-tooltip-detail"><v-icon size="14" color="info" class="mr-1">mdi-folder</v-icon>{{ __("localStorage") }}: <b>{{ formatBytes(cacheUsageDetails.localStorage) }}</b></div>
-				</div>
-				<div class="cache-tooltip-detail" v-else>
-					{{ __("Calculating...") }}
-				</div>
-          <v-divider class="my-2" />
+        <div v-if="!cacheUsageLoading">
+          <div class="cache-tooltip-section-title mb-1">{{ __("Breakdown") }}</div>
+          <div class="cache-tooltip-detail"><v-icon size="14" color="info" class="mr-1">mdi-database-clock</v-icon>{{ __("Total Size") }}: <b>{{ formatBytes(cacheUsageDetails.total) }}</b></div>
+          <div class="cache-tooltip-detail"><v-icon size="14" color="info" class="mr-1">mdi-database</v-icon>{{ __("IndexedDB") }}: <b>{{ formatBytes(cacheUsageDetails.indexedDB) }}</b></div>
+          <div class="cache-tooltip-detail"><v-icon size="14" color="info" class="mr-1">mdi-folder</v-icon>{{ __("localStorage") }}: <b>{{ formatBytes(cacheUsageDetails.localStorage) }}</b></div>
+        </div>
+        <div class="cache-tooltip-detail" v-else>
+          {{ __("Calculating...") }}
+        </div>
+        <v-divider class="my-2" />
         <div v-if="cacheUsage >= 80" class="cache-tooltip-warning">
           <v-icon size="14" color="error" class="mr-1">mdi-alert</v-icon>
           {{ __("Warning: High cache usage may affect performance.") }}
@@ -194,7 +194,6 @@ export default {
   position: absolute;
   left: 0;
   top: 0;
-  width: 0;
   z-index: 1;
 }
 .cache-bar-label-inside {
@@ -216,6 +215,13 @@ export default {
   font-weight: 400;
   z-index: 2;
 }
+.cache-tooltip-section-title {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 4px;
+  color: var(--primary);
+  opacity: 0.85;
+}
 .cache-tooltip-warning {
   color: #d32f2f;
   font-size: 12px;
@@ -234,13 +240,6 @@ export default {
   font-size: 12px;
   display: flex;
   align-items: center;
-}
-.cache-tooltip-section-title {
-  font-weight: 600;
-  font-size: 13px;
-  margin-bottom: 4px;
-  color: var(--primary);
-  opacity: 0.85;
 }
 
 /* Fix tooltip background and text color in light mode */

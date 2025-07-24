@@ -16,6 +16,16 @@
         <div v-if="loading" class="db-tooltip-detail">{{ __("Loading database stats...") }}</div>
         <div v-else-if="error" class="db-tooltip-warning">{{ error }}</div>
         <div v-else>
+          <div class="db-tooltip-sparkline mb-2">
+            <svg :width="120" :height="32" class="db-sparkline">
+              <polyline
+                :points="sparklinePoints"
+                fill="none"
+                stroke="#1976d2"
+                stroke-width="2"
+              />
+            </svg>
+          </div>
           <div class="db-tooltip-section-title mb-1">{{ __("Database Info") }}</div>
           <div class="db-tooltip-detail flex items-center mb-1">
             <v-icon size="14" color="info" class="mr-1">mdi-database-settings</v-icon>

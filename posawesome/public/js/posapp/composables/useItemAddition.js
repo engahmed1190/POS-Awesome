@@ -1,5 +1,5 @@
 import { ref, nextTick } from "vue";
-import _ from 'lodash';
+import _ from "lodash";
 
 export function useItemAddition() {
 	// Remove item from invoice
@@ -76,30 +76,30 @@ export function useItemAddition() {
 						uom: new_item.uom,
 					},
 				});
-                                if (r.message) {
-                                        const price = parseFloat(r.message);
-                                        const baseCurrency =
-                                                context.price_list_currency || context.pos_profile.currency;
+				if (r.message) {
+					const price = parseFloat(r.message);
+					const baseCurrency =
+						context.price_list_currency || context.pos_profile.currency;
 
-                                        // Convert price to selected currency when multi-currency is enabled
-                                        let converted_price = price;
-                                        if (
-                                                context.pos_profile.posa_allow_multi_currency &&
-                                                context.selected_currency &&
-                                                context.selected_currency !== baseCurrency
-                                        ) {
-                                                converted_price = price * (context.exchange_rate || 1);
-                                        }
+					// Convert price to selected currency when multi-currency is enabled
+					let converted_price = price;
+					if (
+						context.pos_profile.posa_allow_multi_currency &&
+						context.selected_currency &&
+						context.selected_currency !== baseCurrency
+					) {
+						converted_price = price * (context.exchange_rate || 1);
+					}
 
-                                        Object.assign(new_item, {
-                                                rate: converted_price,
-                                                price_list_rate: converted_price,
-                                                base_rate: price,
-                                                base_price_list_rate: price,
-                                                _manual_rate_set: true,
-                                                skip_force_update: true,
-                                        });
-                                }
+					Object.assign(new_item, {
+						rate: converted_price,
+						price_list_rate: converted_price,
+						base_rate: price,
+						base_price_list_rate: price,
+						_manual_rate_set: true,
+						skip_force_update: true,
+					});
+				}
 			} catch (e) {
 				console.warn("UOM price fetch failed", e);
 			}
@@ -285,7 +285,8 @@ export function useItemAddition() {
 		}
 		// Expand row if batch/serial required
 		if ((!context.pos_profile.posa_auto_set_batch && new_item.has_batch_no) || new_item.has_serial_no) {
-			context.expanded.push(new_item);
+			// Only store the row ID to keep expanded array consistent
+			context.expanded.push(new_item.posa_row_id);
 		}
 		return new_item;
 	};
@@ -322,10 +323,10 @@ export function useItemAddition() {
 	function groupAndAddItem(items, newItem) {
 		// Find a matching item (by item_code, uom, and rate)
 		const match = items.find(
-			item =>
+			(item) =>
 				item.item_code === newItem.item_code &&
 				item.uom === newItem.uom &&
-				item.rate === newItem.rate
+				item.rate === newItem.rate,
 		);
 		if (match) {
 			// If found, increment quantity
@@ -345,6 +346,6 @@ export function useItemAddition() {
 		getNewItem,
 		clearInvoice,
 		groupAndAddItem,
-		groupAndAddItemDebounced
+		groupAndAddItemDebounced,
 	};
 }
