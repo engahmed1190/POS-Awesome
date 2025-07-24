@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 import frappe
+
 
 @frappe.whitelist()
 def get_active_pos_profile(user=None):
@@ -10,6 +12,8 @@ def get_active_pos_profile(user=None):
         profile = frappe.db.get_single_value("POS Settings", "pos_profile")
     if not profile:
         return None
+    if frappe.db.exists("Standalone POS Profile", profile):
+        return frappe.get_doc("Standalone POS Profile", profile).as_dict()
     return frappe.get_doc("POS Profile", profile).as_dict()
 
 @frappe.whitelist()

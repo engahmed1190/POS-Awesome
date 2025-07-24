@@ -55,3 +55,4 @@ from .utilities import (
         get_pos_profile_tax_inclusive,
 )
 from .utils import get_active_pos_profile, get_default_warehouse
+from .profile import get_profile

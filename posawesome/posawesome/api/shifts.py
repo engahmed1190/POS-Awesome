@@ -1,12 +1,12 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) 2020, Youssef Restom and contributors
 # For license information, please see license.txt
 
-from __future__ import unicode_literals
 import json
+
 import frappe
-from frappe.utils import nowdate
 from frappe import _
+from frappe.utils import nowdate
+
 from .utilities import get_version
 
 
@@ -17,7 +17,7 @@ def get_opening_dialog_data():
 	# Get only POS Profiles where current user is defined in POS Profile User table
 	pos_profiles_data = frappe.db.sql(
 		"""
-        SELECT DISTINCT p.name, p.company, p.currency 
+        SELECT DISTINCT p.name, p.company, p.currency
         FROM `tabPOS Profile` p
         INNER JOIN `tabPOS Profile User` u ON u.parent = p.name
         WHERE p.disabled = 0 AND u.user = %s
@@ -102,7 +102,10 @@ def check_opening_shift(user):
 
 
 def update_opening_shift_data(data, pos_profile):
-	data["pos_profile"] = frappe.get_doc("POS Profile", pos_profile)
+	if frappe.db.exists("Standalone POS Profile", pos_profile):
+		data["pos_profile"] = frappe.get_doc("Standalone POS Profile", pos_profile)
+	else:
+		data["pos_profile"] = frappe.get_doc("POS Profile", pos_profile)
 	if data["pos_profile"].get("posa_language"):
 		frappe.local.lang = data["pos_profile"].posa_language
 	data["company"] = frappe.get_doc("Company", data["pos_profile"].company)
