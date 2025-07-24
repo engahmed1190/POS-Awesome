@@ -27,6 +27,7 @@ export default {
 		serverConnecting: Boolean,
 		isIpHost: Boolean,
 		syncTotals: Object,
+		cacheReady: Boolean,
 	},
 	computed: {
 		/**
@@ -140,6 +141,10 @@ export default {
 		 */
 		syncInfoText() {
 			const { pending, synced, drafted } = this.syncTotals;
+
+			if (!this.cacheReady) {
+				return this.__("Loading cache...");
+			}
 
 			// Ensure we have valid numbers
 			const pendingCount = pending || 0;

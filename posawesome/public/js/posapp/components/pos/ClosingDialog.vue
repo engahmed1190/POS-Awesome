@@ -143,15 +143,22 @@ export default {
 	}),
 	watch: {},
 
-	methods: {
-		close_dialog() {
-			this.closingDialog = false;
-		},
-		submit_dialog() {
-			this.eventBus.emit("submit_closing_pos", this.dialog_data);
-			this.closingDialog = false;
-		},
-	},
+        methods: {
+                close_dialog() {
+                        this.closingDialog = false;
+                },
+                submit_dialog() {
+                        const invalid = (this.dialog_data.payments || []).some(
+                                (p) => isNaN(parseFloat(p.closing_amount))
+                        );
+                        if (invalid) {
+                                alert(this.__("Invalid closing amount"));
+                                return;
+                        }
+                        this.eventBus.emit("submit_closing_pos", this.dialog_data);
+                        this.closingDialog = false;
+                },
+        },
 
 	computed: {
 		isDarkTheme() {

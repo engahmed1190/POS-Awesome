@@ -1,4 +1,4 @@
-import Dexie from "dexie";
+import Dexie from "dexie/dist/dexie.mjs";
 import { withWriteLock } from "./db-utils.js";
 
 // --- Dexie initialization ---------------------------------------------------
@@ -26,17 +26,36 @@ export async function checkDbHealth() {
 
 let persistWorker = null;
 
-if (typeof Worker !== "undefined") {
+export function initPersistWorker() {
+	if (persistWorker || typeof Worker === "undefined") return;
 	try {
 		// Load the worker without a query string so the service worker
 		// can serve the cached version when offline.
 		const workerUrl = "/assets/posawesome/js/posapp/workers/itemWorker.js";
-		persistWorker = new Worker(workerUrl, { type: "classic" });
+		try {
+			persistWorker = new Worker(workerUrl, { type: "classic" });
+		} catch (err) {
+			persistWorker = new Worker(workerUrl, { type: "module" });
+		}
 	} catch (e) {
 		console.error("Failed to init persist worker", e);
 		persistWorker = null;
 	}
 }
+
+export function terminatePersistWorker() {
+	if (persistWorker) {
+		try {
+			persistWorker.terminate();
+		} catch (e) {
+			console.error("Failed to terminate persist worker", e);
+		}
+		persistWorker = null;
+	}
+}
+
+// Initialize worker immediately
+initPersistWorker();
 
 // Persist queue for batching operations
 const persistQueue = {};

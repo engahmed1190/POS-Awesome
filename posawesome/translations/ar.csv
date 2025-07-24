@@ -25,6 +25,7 @@ DocType: POS Offer,Auto Apply,تطبيق تلقائي
 Custom Field - label: POS Profile-posa_allow_delete,Auto Delete Draft Invoice,حذف فاتورة حذف تلقائي
 Custom Field - label: POS Profile-posa_allow_delete_offline_invoice,Allow Delete Offline Invoice,السماح بحذف فاتورة في وضع عدم الاتصال
 Custom Field - label: POS Profile-posa_auto_set_batch,Auto Set Batch,مجموعة مجموعة السيارات
+Custom Field - label: POS Profile-posa_allow_price_list_rate_change,Allow Price List Rate Change,السماح بتغيير سعر قائمة الأسعار
 DocType: POS Offer,Brand,ماركة
 DocType: POS Opening Shift,Cancelled,ألغى
 Custom Field - label: POS Profile-posa_cash_mode_of_payment,Cash Mode of Payment,الوضع النقدي للدفع

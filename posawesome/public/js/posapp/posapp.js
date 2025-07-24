@@ -1,6 +1,6 @@
 import { createVuetify } from "vuetify";
 import { createApp } from "vue";
-import Dexie from "dexie";
+import Dexie from "dexie/dist/dexie.mjs";
 import VueDatePicker from "@vuepic/vue-datepicker";
 import "@vuepic/vue-datepicker/dist/main.css";
 import eventBus from "./bus";

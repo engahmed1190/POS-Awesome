@@ -17,6 +17,7 @@
 					:server-connecting="serverConnecting"
 					:is-ip-host="isIpHost"
 					:sync-totals="syncTotals"
+					:cache-ready="cacheReady"
 				/>
 			</template>
 
@@ -30,12 +31,24 @@
 				/>
 			</template>
 
+      <!-- Slot for CPU gadget -->
+      <template #cpu-gadget>
+        <ServerUsageGadget />
+      </template>
+
+			<!-- Slot for Database Usage Gadget -->
+			<template #db-usage-gadget>
+				<DatabaseUsageGadget />
+			</template>
+
 			<!-- Slot for menu -->
 			<template #menu>
 				<NavbarMenu
 					:pos-profile="posProfile"
 					:last-invoice-id="lastInvoiceId"
 					:manual-offline="manualOffline"
+					:network-online="networkOnline"
+					:server-online="serverOnline"
 					:is-dark="isDark"
 					@close-shift="openCloseShift"
 					@print-last-invoice="printLastInvoice"
@@ -96,7 +109,11 @@ import StatusIndicator from "./navbar/StatusIndicator.vue";
 import CacheUsageMeter from "./navbar/CacheUsageMeter.vue";
 import AboutDialog from "./navbar/AboutDialog.vue";
 import OfflineInvoices from "./OfflineInvoices.vue";
-import { clearAllCache } from "../../offline/cache.js";
+import ServerUsageGadget from "./navbar/ServerUsageGadget.vue";
+import DatabaseUsageGadget from "./navbar/DatabaseUsageGadget.vue";
+import { forceClearAllCache } from "../../offline/cache.js";
+import { clearAllCaches } from "../../utils/clearAllCaches.js";
+import { isOffline } from "../../offline/index.js";
 
 export default {
 	name: "NavBar",
@@ -108,6 +125,8 @@ export default {
 		CacheUsageMeter,
 		AboutDialog,
 		OfflineInvoicesDialog: OfflineInvoices,
+		ServerUsageGadget,
+		DatabaseUsageGadget,
 	},
 	props: {
 		posProfile: {
@@ -141,6 +160,7 @@ export default {
 			type: Object,
 			default: () => ({ total: 0, indexedDB: 0, localStorage: 0 }),
 		},
+		cacheReady: Boolean,
 	},
 	data() {
 		return {
@@ -231,12 +251,26 @@ export default {
 			this.$emit("toggle-offline");
 		},
 		async clearCache() {
+			if (isOffline()) {
+				this.showMessage({
+					color: "warning",
+					title: this.__("Cannot clear cache while offline"),
+				});
+				return;
+			}
 			try {
-				await clearAllCache();
-				this.showMessage({ color: "success", title: this.__("Cache cleared successfully") });
+				await forceClearAllCache();
+				await clearAllCaches({ confirmBeforeClear: false }).catch(() => {});
+				this.showMessage({
+					color: "success",
+					title: this.__("Cache cleared successfully"),
+				});
 			} catch (e) {
 				console.error("Failed to clear cache", e);
-				this.showMessage({ color: "error", title: this.__("Failed to clear cache") });
+				this.showMessage({
+					color: "error",
+					title: this.__("Failed to clear cache"),
+				});
 			} finally {
 				setTimeout(() => location.reload(), 1000);
 			}

@@ -10,7 +10,7 @@
 		<OpeningDialog v-if="dialog" :dialog="dialog"></OpeningDialog>
 		<v-row v-show="!dialog" dense class="ma-0 dynamic-main-row">
 			<v-col
-				v-show="!payment && !offers && !coupons"
+				v-show="!payment && !showOffers && !coupons"
 				xl="5"
 				lg="5"
 				md="5"
@@ -20,7 +20,7 @@
 			>
 				<ItemsSelector></ItemsSelector>
 			</v-col>
-			<v-col v-show="offers" xl="5" lg="5" md="5" sm="5" cols="12" class="pos dynamic-col">
+			<v-col v-show="showOffers" xl="5" lg="5" md="5" sm="5" cols="12" class="pos dynamic-col">
 				<PosOffers></PosOffers>
 			</v-col>
 			<v-col v-show="coupons" xl="5" lg="5" md="5" sm="5" cols="12" class="pos dynamic-col">
@@ -52,8 +52,6 @@ import Variants from "./Variants.vue";
 import Returns from "./Returns.vue";
 import MpesaPayments from "./Mpesa-Payments.vue";
 import {
-	getCachedOffers,
-	saveOffers,
 	getOpeningStorage,
 	setOpeningStorage,
 	clearOpeningStorage,
@@ -61,19 +59,31 @@ import {
 	checkDbHealth,
 	setTaxTemplate,
 } from "../../../offline/index.js";
+import { getCurrentInstance } from "vue";
+import { usePosShift } from "../../composables/usePosShift.js";
+import { useOffers } from "../../composables/useOffers.js";
 // Import the cache cleanup function
 import { clearExpiredCustomerBalances } from "../../../offline/index.js";
-import { responsiveMixin } from "../../mixins/responsive.js";
+import { useResponsive } from "../../composables/useResponsive.js";
 
 export default {
-	mixins: [responsiveMixin],
+	setup() {
+		const instance = getCurrentInstance();
+		const responsive = useResponsive();
+		const shift = usePosShift(() => {
+			if (instance && instance.proxy) {
+				instance.proxy.dialog = true;
+			}
+		});
+		const offers = useOffers();
+		return { ...responsive, ...shift, ...offers };
+	},
 	data: function () {
 		return {
 			dialog: false,
-			pos_profile: "",
-			pos_opening_shift: "",
+
 			payment: false,
-			offers: false,
+			showOffers: false,
 			coupons: false,
 		};
 	},
@@ -96,156 +106,8 @@ export default {
 	},
 
 	methods: {
-		async check_opening_entry() {
-			await initPromise;
-			await checkDbHealth();
-			return frappe
-				.call("posawesome.posawesome.api.shifts.check_opening_shift", {
-					user: frappe.session.user,
-				})
-				.then((r) => {
-					if (r.message) {
-						this.pos_profile = r.message.pos_profile;
-						this.pos_opening_shift = r.message.pos_opening_shift;
-						this.get_offers(this.pos_profile.name);
-						if (this.pos_profile.taxes_and_charges) {
-							frappe.call({
-								method: "frappe.client.get",
-								args: {
-									doctype: "Sales Taxes and Charges Template",
-									name: this.pos_profile.taxes_and_charges,
-								},
-								callback: (res) => {
-									if (res.message) {
-										setTaxTemplate(this.pos_profile.taxes_and_charges, res.message);
-									}
-								},
-							});
-						}
-						this.eventBus.emit("register_pos_profile", r.message);
-						this.eventBus.emit("set_company", r.message.company);
-						try {
-							frappe.realtime.emit("pos_profile_registered");
-						} catch (e) {
-							console.warn("Realtime emit failed", e);
-						}
-						console.info("LoadPosProfile");
-						try {
-							setOpeningStorage(r.message);
-						} catch (e) {
-							console.error("Failed to cache opening data", e);
-						}
-					} else {
-						const data = getOpeningStorage();
-						if (data) {
-							this.pos_profile = data.pos_profile;
-							this.pos_opening_shift = data.pos_opening_shift;
-							this.get_offers(this.pos_profile.name);
-							this.eventBus.emit("register_pos_profile", data);
-							this.eventBus.emit("set_company", data.company);
-							try {
-								frappe.realtime.emit("pos_profile_registered");
-							} catch (e) {
-								console.warn("Realtime emit failed", e);
-							}
-							console.info("LoadPosProfile (cached)");
-							return;
-						}
-						this.create_opening_voucher();
-					}
-				})
-				.catch(() => {
-					const data = getOpeningStorage();
-					if (data) {
-						this.pos_profile = data.pos_profile;
-						this.pos_opening_shift = data.pos_opening_shift;
-						this.get_offers(this.pos_profile.name);
-						this.eventBus.emit("register_pos_profile", data);
-						this.eventBus.emit("set_company", data.company);
-						try {
-							frappe.realtime.emit("pos_profile_registered");
-						} catch (e) {
-							console.warn("Realtime emit failed", e);
-						}
-						console.info("LoadPosProfile (cached)");
-						return;
-					}
-					this.create_opening_voucher();
-				});
-		},
 		create_opening_voucher() {
 			this.dialog = true;
-		},
-		get_closing_data() {
-			return frappe
-				.call(
-					"posawesome.posawesome.doctype.pos_closing_shift.pos_closing_shift.make_closing_shift_from_opening",
-					{
-						opening_shift: this.pos_opening_shift,
-					},
-				)
-				.then((r) => {
-					if (r.message) {
-						this.eventBus.emit("open_ClosingDialog", r.message);
-					} else {
-						// console.log(r);
-					}
-				});
-		},
-		submit_closing_pos(data) {
-			frappe
-				.call(
-					"posawesome.posawesome.doctype.pos_closing_shift.pos_closing_shift.submit_closing_shift",
-					{
-						closing_shift: data,
-					},
-				)
-				.then((r) => {
-					if (r.message) {
-						// Clear the cached opening shift data
-						this.pos_opening_shift = null;
-						this.pos_profile = null;
-
-						// Clear from local storage
-						clearOpeningStorage();
-
-						this.eventBus.emit("show_message", {
-							title: `POS Shift Closed`,
-							color: "success",
-						});
-						this.check_opening_entry();
-					} else {
-						console.log(r);
-					}
-				});
-		},
-		get_offers(pos_profile) {
-			// Load cached offers if available
-			if (this.pos_profile && this.pos_profile.posa_local_storage) {
-				const cached = getCachedOffers();
-				if (cached.length) {
-					this.eventBus.emit("set_offers", cached);
-				}
-			}
-
-			return frappe
-				.call("posawesome.posawesome.api.offers.get_offers", {
-					profile: pos_profile,
-				})
-				.then((r) => {
-					if (r.message) {
-						console.info("LoadOffers");
-						saveOffers(r.message);
-						this.eventBus.emit("set_offers", r.message);
-					}
-				})
-				.catch((err) => {
-					console.error("Failed to fetch offers:", err);
-					const cached = getCachedOffers();
-					if (cached.length) {
-						this.eventBus.emit("set_offers", cached);
-					}
-				});
 		},
 		get_pos_setting() {
 			frappe.db.get_doc("POS Settings", undefined).then((doc) => {
@@ -263,25 +125,32 @@ export default {
 			});
 			this.eventBus.on("register_pos_data", (data) => {
 				this.pos_profile = data.pos_profile;
-				this.get_offers(this.pos_profile.name);
+				this.get_offers(this.pos_profile.name, this.pos_profile);
 				this.pos_opening_shift = data.pos_opening_shift;
 				this.eventBus.emit("register_pos_profile", data);
 				console.info("LoadPosProfile");
 			});
+			// When profile is registered directly from composables,
+			// ensure offers are fetched as well
+			this.eventBus.on("register_pos_profile", (data) => {
+				if (data && data.pos_profile) {
+					this.get_offers(data.pos_profile.name, data.pos_profile);
+				}
+			});
 			this.eventBus.on("show_payment", (data) => {
-				this.payment = true ? data === "true" : false;
-				this.offers = false ? data === "true" : false;
-				this.coupons = false ? data === "true" : false;
+				this.payment = data === "true";
+				this.showOffers = false;
+				this.coupons = false;
 			});
 			this.eventBus.on("show_offers", (data) => {
-				this.offers = true ? data === "true" : false;
-				this.payment = false ? data === "true" : false;
-				this.coupons = false ? data === "true" : false;
+				this.showOffers = data === "true";
+				this.payment = false;
+				this.coupons = false;
 			});
 			this.eventBus.on("show_coupons", (data) => {
-				this.coupons = true ? data === "true" : false;
-				this.offers = false ? data === "true" : false;
-				this.payment = false ? data === "true" : false;
+				this.coupons = data === "true";
+				this.showOffers = false;
+				this.payment = false;
 			});
 			this.eventBus.on("open_closing_dialog", () => {
 				this.get_closing_data();
@@ -294,6 +163,7 @@ export default {
 	beforeUnmount() {
 		this.eventBus.off("close_opening_dialog");
 		this.eventBus.off("register_pos_data");
+		this.eventBus.off("register_pos_profile");
 		this.eventBus.off("LoadPosProfile");
 		this.eventBus.off("show_offers");
 		this.eventBus.off("show_coupons");

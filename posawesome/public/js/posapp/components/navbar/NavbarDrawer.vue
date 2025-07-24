@@ -4,7 +4,7 @@
 		:mini-variant="mini"
 		expand-on-hover
 		width="220"
-		class="drawer-custom"
+		:class="['drawer-custom', { 'drawer-visible': drawerOpen }]"
 		@mouseleave="handleMouseLeave"
 		temporary
 		location="left"
@@ -39,6 +39,10 @@
 				</v-list-item>
 			</v-list-item-group>
 		</v-list>
+		<!-- Sport section, hidden by default -->
+		<div v-if="showSport">
+			<!-- Sport content goes here -->
+		</div>
 	</v-navigation-drawer>
 </template>
 
@@ -58,6 +62,7 @@ export default {
 			mini: false,
 			drawerOpen: this.drawer,
 			activeItem: this.item,
+			showSport: true,
 		};
 	},
 	watch: {
@@ -219,27 +224,37 @@ export default {
 	border-color: rgba(255, 255, 255, 0.12) !important;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-	.drawer-custom {
-		width: 280px !important;
-	}
+/* Hide drawer by default, show only when activated */
+.drawer-custom {
+	display: none !important;
+}
+.drawer-custom.drawer-visible {
+	display: block !important;
+}
 
-	:deep(.dark-theme) .drawer-custom,
-	:deep(.v-theme--dark) .drawer-custom {
-		background-color: var(--surface-primary, #1e1e1e) !important;
+/* Responsive adjustments for width and dark theme */
+@media (max-width: 900px) and (orientation: landscape) {
+	.drawer-custom.drawer-visible {
+		width: 180px !important;
 	}
 }
 
-/* Completely hide the sidebar on very small screens */
-@media (max-width: 600px) {
-	.drawer-custom {
-		display: none !important;
+@media (min-width: 601px) and (max-width: 1024px) {
+	.drawer-custom.drawer-visible {
+		width: 240px !important;
 	}
+}
 
-	:deep(.dark-theme) .drawer-custom,
-	:deep(.v-theme--dark) .drawer-custom {
-		display: none !important;
+@media (min-width: 1025px) {
+	.drawer-custom.drawer-visible {
+		width: 300px !important;
+	}
+}
+
+@media (max-width: 1024px) {
+	:deep(.dark-theme) .drawer-custom.drawer-visible,
+	:deep(.v-theme--dark) .drawer-custom.drawer-visible {
+		background-color: var(--surface-primary, #1e1e1e) !important;
 	}
 }
 </style>

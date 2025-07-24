@@ -10,21 +10,51 @@
 						:width="3"
 						class="cache-meter"
 					>
-						<v-icon size="16">mdi-database</v-icon>
+						<v-icon size="16" color="info">mdi-database-clock</v-icon>
 					</v-progress-circular>
 				</div>
 			</template>
 			<div class="cache-tooltip-content">
-				<div class="cache-tooltip-title">{{ __("Cache Usage") }}</div>
-				<div class="cache-tooltip-detail" v-if="!cacheUsageLoading">
-					<div>{{ __("Total Size") }}: {{ formatBytes(cacheUsageDetails.total) }}</div>
-					<div>{{ __("IndexedDB") }}: {{ formatBytes(cacheUsageDetails.indexedDB) }}</div>
-					<div>{{ __("localStorage") }}: {{ formatBytes(cacheUsageDetails.localStorage) }}</div>
+				<div class="cache-tooltip-title">
+            <v-icon size="14" color="info" class="mr-1">mdi-database-clock</v-icon>
+            {{ __("Cache Usage") }}
+          </div>
+          <v-divider class="my-2" />
+          <div class="cache-tooltip-section-title mb-1">{{ __("Usage") }}</div>
+        <div class="cache-tooltip-bar mb-2">
+          <div class="cache-bar-bg">
+            <div
+              class="cache-bar-fill"
+              :style="{ width: cacheUsage + '%', background: cacheBarGradient }"
+            >
+              <span class="cache-bar-label-inside">{{ cacheUsage }}%</span>
+            </div>
+            <span class="cache-bar-max">100%</span>
+          </div>
+        </div>
+				<div v-if="!cacheUsageLoading">
+            <div class="cache-tooltip-section-title mb-1">{{ __("Breakdown") }}</div>
+            <div class="cache-tooltip-detail"><v-icon size="14" color="info" class="mr-1">mdi-database-clock</v-icon>{{ __("Total Size") }}: <b>{{ formatBytes(cacheUsageDetails.total) }}</b></div>
+            <div class="cache-tooltip-detail"><v-icon size="14" color="info" class="mr-1">mdi-database</v-icon>{{ __("IndexedDB") }}: <b>{{ formatBytes(cacheUsageDetails.indexedDB) }}</b></div>
+            <div class="cache-tooltip-detail"><v-icon size="14" color="info" class="mr-1">mdi-folder</v-icon>{{ __("localStorage") }}: <b>{{ formatBytes(cacheUsageDetails.localStorage) }}</b></div>
 				</div>
 				<div class="cache-tooltip-detail" v-else>
 					{{ __("Calculating...") }}
 				</div>
-				<div class="cache-tooltip-action">
+          <v-divider class="my-2" />
+        <div v-if="cacheUsage >= 80" class="cache-tooltip-warning">
+          <v-icon size="14" color="error" class="mr-1">mdi-alert</v-icon>
+          {{ __("Warning: High cache usage may affect performance.") }}
+        </div>
+        <div class="cache-tooltip-tip mt-2">
+          <v-icon size="14" color="primary" class="mr-1">mdi-lightbulb-on-outline</v-icon>
+          {{ __("Tip: Clear cache regularly to free up space and keep the app fast.") }}
+        </div>
+        <div class="cache-tooltip-explanation mt-2">
+          <v-icon size="14" color="info" class="mr-1">mdi-database-clock</v-icon>
+          {{ __("The app stores data locally for offline use. This is called cache.") }}
+        </div>
+				<div class="cache-tooltip-action mt-2">
 					<v-icon size="14" class="mr-1">mdi-refresh</v-icon>
 					{{ __("Click to refresh") }}
 				</div>
@@ -60,6 +90,15 @@ export default {
 			if (this.cacheUsage < 50) return "success";
 			if (this.cacheUsage < 80) return "warning";
 			return "error";
+		},
+		cacheBarGradient() {
+			if (this.cacheUsage < 50) {
+				return 'linear-gradient(90deg, #43e97b 0%, #38f9d7 100%)';
+			} else if (this.cacheUsage < 80) {
+				return 'linear-gradient(90deg, #f7971e 0%, #ffd200 100%)';
+			} else {
+				return 'linear-gradient(90deg, #f953c6 0%, #b91d73 100%)';
+			}
 		},
 	},
 	methods: {
@@ -127,5 +166,110 @@ export default {
 	align-items: center;
 	margin-top: 8px;
 	color: var(--primary);
+}
+.cache-tooltip-bar {
+  width: 100%;
+}
+.cache-bar-bg {
+  width: 100%;
+  height: 18px;
+  background: #e3f2fd;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-right: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.cache-bar-fill {
+  height: 100%;
+  border-radius: 8px;
+  transition: width 0.5s cubic-bezier(.4,0,.2,1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 600;
+  font-size: 13px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  z-index: 1;
+}
+.cache-bar-label-inside {
+  width: 100%;
+  text-align: center;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  position: relative;
+  z-index: 2;
+  pointer-events: none;
+}
+.cache-bar-max {
+  position: absolute;
+  right: 8px;
+  top: 0;
+  font-size: 11px;
+  color: #bdbdbd;
+  font-weight: 400;
+  z-index: 2;
+}
+.cache-tooltip-warning {
+  color: #d32f2f;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.cache-tooltip-tip {
+  color: #1976d2;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+}
+.cache-tooltip-explanation {
+  color: #0288d1;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+}
+.cache-tooltip-section-title {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 4px;
+  color: var(--primary);
+  opacity: 0.85;
+}
+
+/* Fix tooltip background and text color in light mode */
+:deep(.v-tooltip .v-overlay__content),
+:deep(.v-overlay__content) {
+  background: #e3f2fd !important;
+  color: #1a237e !important;
+  box-shadow: 0 4px 16px rgba(25, 118, 210, 0.10) !important;
+  border: 1px solid #90caf9 !important;
+}
+
+.cache-tooltip-title,
+.cache-tooltip-action {
+  color: #1a237e !important;
+}
+
+:deep(.dark-theme) .v-tooltip .v-overlay__content,
+:deep(.v-theme--dark) .v-tooltip .v-overlay__content,
+:deep(.dark-theme) .v-overlay__content,
+:deep(.v-theme--dark) .v-overlay__content {
+  background: #26344d !important;
+  color: #fff !important;
+  border: 1px solid #1976d2 !important;
+}
+
+:deep(.dark-theme) .cache-tooltip-title,
+:deep(.v-theme--dark) .cache-tooltip-title,
+:deep(.dark-theme) .cache-tooltip-action,
+:deep(.v-theme--dark) .cache-tooltip-action {
+  color: #fff !important;
 }
 </style>

@@ -16,7 +16,11 @@ export default {
 	// Watch for expanded row change and update item detail
 	expanded(data_value) {
 		if (data_value.length > 0) {
-			this.update_item_detail(data_value[0]);
+			const expandedId = data_value[0];
+			const item = this.items.find((it) => it.posa_row_id === expandedId);
+			if (item) {
+				this.update_item_detail(item);
+			}
 		}
 	},
 	// Watch for discount offer name change and emit

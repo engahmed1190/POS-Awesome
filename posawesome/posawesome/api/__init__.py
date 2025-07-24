@@ -46,11 +46,12 @@ from .shifts import (
 	get_opening_dialog_data,
 )
 from .utilities import (
-	get_app_branch,
-	get_app_info,
-	get_language_options,
-	get_selling_price_lists,
-	get_translation_dict,
-	get_version,
-	get_pos_profile_tax_inclusive,
+        get_app_branch,
+        get_app_info,
+        get_language_options,
+        get_selling_price_lists,
+        get_translation_dict,
+        get_version,
+        get_pos_profile_tax_inclusive,
 )
+from .utils import get_active_pos_profile, get_default_warehouse

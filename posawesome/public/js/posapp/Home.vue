@@ -15,6 +15,7 @@
 				:cache-usage="cacheUsage"
 				:cache-usage-loading="cacheUsageLoading"
 				:cache-usage-details="cacheUsageDetails"
+				:cache-ready="cacheReady"
 				@change-page="setPage($event)"
 				@nav-click="handleNavClick"
 				@close-shift="handleCloseShift"
@@ -46,6 +47,7 @@ import {
 	MAX_QUEUE_ITEMS,
 	initPromise,
 	memoryInitPromise,
+	isCacheReady,
 	toggleManualOffline,
 	isManualOffline,
 	syncOfflineInvoices,
@@ -54,6 +56,16 @@ import {
 	getLastSyncTotals,
 } from "../offline/index.js";
 import { silentPrint } from "./plugins/print.js";
+import {
+	setupNetworkListeners,
+	checkNetworkConnectivity,
+	detectHostType,
+	performConnectivityChecks,
+	checkFrappePing,
+	checkCurrentOrigin,
+	checkExternalConnectivity,
+	checkWebSocketConnectivity,
+} from "./composables/useNetwork.js";
 
 export default {
 	data: function () {
@@ -78,6 +90,7 @@ export default {
 			cacheUsage: 0,
 			cacheUsageLoading: false,
 			cacheUsageDetails: { total: 0, indexedDB: 0, localStorage: 0 },
+			cacheReady: false,
 		};
 	},
 	computed: {
@@ -107,12 +120,22 @@ export default {
 	},
 	mounted() {
 		this.remove_frappe_nav();
+		// Initialize cache ready state early from stored value
+		this.cacheReady = isCacheReady();
 		this.initializeData();
 		this.setupNetworkListeners();
 		this.setupEventListeners();
 		this.handleRefreshCacheUsage();
 	},
 	methods: {
+		setupNetworkListeners,
+		checkNetworkConnectivity,
+		detectHostType,
+		performConnectivityChecks,
+		checkFrappePing,
+		checkCurrentOrigin,
+		checkExternalConnectivity,
+		checkWebSocketConnectivity,
 		setPage(page) {
 			this.page = page;
 		},
@@ -120,6 +143,7 @@ export default {
 		async initializeData() {
 			await initPromise;
 			await memoryInitPromise;
+			this.cacheReady = true;
 			checkDbHealth().catch(() => {});
 			// Load POS profile from cache or storage
 			const openingData = getOpeningStorage();
@@ -155,252 +179,6 @@ export default {
 				this.networkOnline = false;
 				this.serverOnline = false;
 				window.serverOnline = false;
-			}
-		},
-
-		setupNetworkListeners() {
-			// Listen for network status changes
-			window.addEventListener("online", () => {
-				this.networkOnline = true;
-				console.log("Network: Online");
-				// Verify actual connectivity
-				this.checkNetworkConnectivity();
-			});
-
-			window.addEventListener("offline", () => {
-				this.networkOnline = false;
-				this.serverOnline = false;
-				window.serverOnline = false;
-				console.log("Network: Offline");
-				this.$forceUpdate();
-			});
-
-			// Initial network status
-			this.networkOnline = navigator.onLine;
-			this.checkNetworkConnectivity();
-
-			// Periodic network check every 15 seconds
-			setInterval(() => {
-				if (navigator.onLine) {
-					this.checkNetworkConnectivity();
-				}
-			}, 15000);
-		},
-
-		async checkNetworkConnectivity() {
-			try {
-				let isConnected = false;
-
-				// Strategy 1: Try Frappe's desk endpoint (always available)
-				try {
-					const response = await fetch("/app", {
-						method: "HEAD",
-						cache: "no-cache",
-						signal: AbortSignal.timeout(5000),
-					});
-					if (response.status < 500) {
-						isConnected = true;
-					}
-				} catch (error) {
-					console.log("Desk endpoint check failed:", error.message);
-				}
-
-				// Strategy 2: Try a static asset if desk fails
-				if (!isConnected) {
-					try {
-						const response = await fetch("/assets/frappe/images/frappe-logo.svg", {
-							method: "HEAD",
-							cache: "no-cache",
-							signal: AbortSignal.timeout(3000),
-						});
-						if (response.status < 500) {
-							isConnected = true;
-						}
-					} catch (error) {
-						console.log("Static asset check failed:", error.message);
-					}
-				}
-
-				// Strategy 3: Try current page origin as last resort
-				if (!isConnected) {
-					try {
-						const response = await fetch(window.location.origin, {
-							method: "HEAD",
-							cache: "no-cache",
-							signal: AbortSignal.timeout(3000),
-						});
-						if (response.status < 500) {
-							isConnected = true;
-						}
-					} catch (error) {
-						console.log("Origin check failed:", error.message);
-					}
-				}
-
-				// Update network and server status
-				if (isConnected) {
-					this.networkOnline = true;
-					this.serverOnline = true;
-					window.serverOnline = true;
-					this.serverConnecting = false;
-					console.log("Network: Connected");
-				} else {
-					this.networkOnline = navigator.onLine;
-					this.serverOnline = false;
-					window.serverOnline = false;
-					this.serverConnecting = false;
-					console.log("Network: Disconnected");
-				}
-
-				// Force Vue reactivity update
-				this.$forceUpdate();
-			} catch (error) {
-				console.warn("Network connectivity check failed:", error);
-				this.networkOnline = navigator.onLine;
-				this.serverOnline = false;
-				window.serverOnline = false;
-				this.serverConnecting = false;
-				this.$forceUpdate();
-			}
-		},
-
-		detectHostType(hostname) {
-			// Check for IP addresses (IPv4)
-			const ipv4Regex =
-				/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-
-			// Check for IPv6 addresses
-			const ipv6Regex = /^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^::1$|^::/;
-
-			// Check for localhost variants
-			const localhostVariants = ["localhost", "127.0.0.1", "::1", "0.0.0.0"];
-
-			return (
-				ipv4Regex.test(hostname) ||
-				ipv6Regex.test(hostname) ||
-				localhostVariants.includes(hostname.toLowerCase())
-			);
-		},
-
-		async performConnectivityChecks(hostname, protocol, port) {
-			const checks = [];
-
-			// Strategy 1: Try Frappe ping endpoint
-			checks.push(this.checkFrappePing());
-
-			// Strategy 2: Try current origin with a simple request
-			checks.push(this.checkCurrentOrigin(protocol, hostname, port));
-
-			// Strategy 3: For non-local hosts, try external connectivity
-			if (!this.isIpHost) {
-				checks.push(this.checkExternalConnectivity());
-			}
-
-			// Strategy 4: WebSocket connectivity check
-			if (frappe.realtime && frappe.realtime.socket) {
-				checks.push(this.checkWebSocketConnectivity());
-			}
-
-			try {
-				// Wait for any check to succeed (race condition)
-				const results = await Promise.allSettled(checks);
-				return results.some((result) => result.status === "fulfilled" && result.value === true);
-			} catch (error) {
-				console.warn("All connectivity checks failed:", error);
-				return false;
-			}
-		},
-
-		async checkFrappePing() {
-			try {
-				const controller = new AbortController();
-				const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-				const response = await fetch("/api/method/ping", {
-					method: "HEAD",
-					cache: "no-cache",
-					signal: controller.signal,
-					headers: {
-						"Cache-Control": "no-cache, no-store, must-revalidate",
-						Pragma: "no-cache",
-						Expires: "0",
-					},
-				});
-
-				clearTimeout(timeoutId);
-				return response.ok;
-			} catch (error) {
-				if (error.name !== "AbortError") {
-					console.warn("Frappe ping check failed:", error);
-				}
-				return false;
-			}
-		},
-
-		async checkCurrentOrigin(protocol, hostname, port) {
-			try {
-				const controller = new AbortController();
-				const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-				// Construct the URL based on current origin
-				const baseUrl = `${protocol}//${hostname}${port ? ":" + port : ""}`;
-
-				// Try to fetch a lightweight resource
-				const response = await fetch(`${baseUrl}/api/method/frappe.auth.get_logged_user`, {
-					method: "HEAD",
-					cache: "no-cache",
-					signal: controller.signal,
-					headers: {
-						"Cache-Control": "no-cache, no-store, must-revalidate",
-					},
-				});
-
-				clearTimeout(timeoutId);
-				return response.status < 500; // Accept any response that's not a server error
-			} catch (error) {
-				if (error.name !== "AbortError") {
-					console.warn("Current origin check failed:", error);
-				}
-				return false;
-			}
-		},
-
-		async checkExternalConnectivity() {
-			try {
-				const controller = new AbortController();
-				const timeoutId = setTimeout(() => controller.abort(), 3000);
-
-				// Try to reach a reliable external service
-				const response = await fetch("https://httpbin.org/status/200", {
-					method: "HEAD",
-					mode: "no-cors",
-					cache: "no-cache",
-					signal: controller.signal,
-				});
-
-				clearTimeout(timeoutId);
-				return true; // If we reach here, we have internet connectivity
-			} catch (error) {
-				// For no-cors requests, we might get an opaque response
-				// which is still a sign of connectivity
-				if (error.name !== "AbortError") {
-					console.warn("External connectivity check failed:", error);
-				}
-				return false;
-			}
-		},
-
-		async checkWebSocketConnectivity() {
-			try {
-				if (frappe.realtime && frappe.realtime.socket) {
-					const socketState = frappe.realtime.socket.readyState;
-					// WebSocket.OPEN = 1
-					return socketState === 1;
-				}
-				return false;
-			} catch (error) {
-				console.warn("WebSocket connectivity check failed:", error);
-				return false;
 			}
 		},
 
@@ -451,7 +229,11 @@ export default {
 					this.serverConnecting = false;
 					console.log("Server: Disconnected from WebSocket");
 					// Trigger connectivity check to verify if it's just WebSocket or full network
-					setTimeout(() => this.checkNetworkConnectivity(), 1000);
+					setTimeout(() => {
+						if (!isManualOffline()) {
+							this.checkNetworkConnectivity();
+						}
+					}, 1000);
 				});
 
 				frappe.realtime.on("connecting", () => {
@@ -463,13 +245,15 @@ export default {
 				frappe.realtime.on("reconnect", () => {
 					console.log("Server: Reconnected to WebSocket");
 					window.serverOnline = true;
-					this.checkNetworkConnectivity();
+					if (!isManualOffline()) {
+						this.checkNetworkConnectivity();
+					}
 				});
 			}
 
 			// Listen for visibility changes to check connectivity when tab becomes active
 			document.addEventListener("visibilitychange", () => {
-				if (!document.hidden && navigator.onLine) {
+				if (!document.hidden && navigator.onLine && !isManualOffline()) {
 					this.checkNetworkConnectivity();
 				}
 			});

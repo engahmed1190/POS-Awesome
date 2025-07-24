@@ -89,7 +89,11 @@
 					</div>
 				</v-list-item>
 
-				<v-list-item @click="$emit('clear-cache')" class="menu-item-compact neutral-action">
+				<v-list-item
+					@click="$emit('clear-cache')"
+					:disabled="manualOffline || !networkOnline || !serverOnline"
+					class="menu-item-compact neutral-action"
+				>
 					<template v-slot:prepend>
 						<div class="menu-icon-wrapper-compact neutral-icon">
 							<v-icon color="white" size="16">mdi-delete-sweep-outline</v-icon>
@@ -172,6 +176,8 @@ export default {
 		},
 		lastInvoiceId: String,
 		manualOffline: Boolean,
+		networkOnline: Boolean,
+		serverOnline: Boolean,
 		isDark: Boolean,
 	},
 	emits: [

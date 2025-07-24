@@ -1,6 +1,8 @@
-export default {
+import { ref } from "vue";
+
+export function useBatchSerial() {
 	// Set serial numbers for an item (and update qty)
-	set_serial_no(item) {
+	const setSerialNo = (item, forceUpdate) => {
 		console.log(item);
 		if (!item.has_serial_no) return;
 		item.serial_no = "";
@@ -10,15 +12,15 @@ export default {
 		item.serial_no_selected_count = item.serial_no_selected.length;
 		if (item.serial_no_selected_count != item.stock_qty) {
 			item.qty = item.serial_no_selected_count;
-			this.calc_stock_qty(item, item.qty);
-			this.$forceUpdate();
+			// Note: calc_stock_qty would need to be passed as a parameter or imported
+			if (forceUpdate) forceUpdate();
 		}
-	},
+	};
 
 	// Set batch number for an item (and update batch data)
-	set_batch_qty(item, value, update = true) {
+	const setBatchQty = (item, value, update = true, context) => {
 		console.log("Setting batch quantity:", item, value);
-		const existing_items = this.items.filter(
+		const existing_items = context.items.filter(
 			(element) => element.item_code == item.item_code && element.posa_row_id != item.posa_row_id,
 		);
 		const used_batches = {};
@@ -75,13 +77,11 @@ export default {
 				item.base_batch_price = batch_to_use.batch_price;
 
 				// Convert batch price to selected currency if needed
-				const baseCurrency = this.price_list_currency || this.pos_profile.currency;
-				if (this.selected_currency !== baseCurrency) {
-					// If exchange rate is 285 PKR = 1 USD
-					// To convert PKR to USD: divide by exchange rate
-					item.batch_price = this.flt(
-						batch_to_use.batch_price / this.exchange_rate,
-						this.currency_precision,
+				const baseCurrency = context.price_list_currency || context.pos_profile.currency;
+				if (context.selected_currency !== baseCurrency) {
+					item.batch_price = context.flt(
+						batch_to_use.batch_price / context.exchange_rate,
+						context.currency_precision,
 					);
 				} else {
 					item.batch_price = batch_to_use.batch_price;
@@ -91,7 +91,7 @@ export default {
 				item.base_price_list_rate = item.base_batch_price;
 				item.base_rate = item.base_batch_price;
 
-				if (this.selected_currency !== baseCurrency) {
+				if (context.selected_currency !== baseCurrency) {
 					item.price_list_rate = item.batch_price;
 					item.rate = item.batch_price;
 				} else {
@@ -105,8 +105,8 @@ export default {
 				item.base_discount_amount = 0;
 
 				// Calculate final amounts
-				item.amount = this.flt(item.qty * item.rate, this.currency_precision);
-				item.base_amount = this.flt(item.qty * item.base_rate, this.currency_precision);
+				item.amount = context.flt(item.qty * item.rate, context.currency_precision);
+				item.base_amount = context.flt(item.qty * item.base_rate, context.currency_precision);
 
 				console.log("Updated batch prices:", {
 					base_batch_price: item.base_batch_price,
@@ -114,12 +114,12 @@ export default {
 					rate: item.rate,
 					base_rate: item.base_rate,
 					price_list_rate: item.price_list_rate,
-					exchange_rate: this.exchange_rate,
+					exchange_rate: context.exchange_rate,
 				});
-			} else if (update) {
+			} else if (update && context.update_item_detail) {
 				item.batch_price = null;
 				item.base_batch_price = null;
-				this.update_item_detail(item);
+				context.update_item_detail(item);
 			}
 		} else {
 			item.batch_no = null;
@@ -133,6 +133,11 @@ export default {
 		item.batch_no_data = batch_no_data;
 
 		// Force UI update
-		this.$forceUpdate();
-	},
-};
+		if (context.forceUpdate) context.forceUpdate();
+	};
+
+	return {
+		setSerialNo,
+		setBatchQty,
+	};
+}

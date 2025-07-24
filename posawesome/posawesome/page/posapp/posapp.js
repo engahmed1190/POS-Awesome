@@ -140,16 +140,36 @@ async function setupLanguage() {
 }
 
 function loadTranslations(lang) {
+	const language = lang || frappe.boot.lang;
 	return new Promise((resolve) => {
-		frappe.call({
-			method: "posawesome.posawesome.api.utilities.get_translation_dict",
-			args: { lang: lang || frappe.boot.lang },
-			callback: function (r) {
-				if (!r.exc && r.message) {
-					$.extend(frappe._messages, r.message);
-				}
-				resolve();
-			},
-		});
+		if (navigator.onLine) {
+			frappe.call({
+				method: "posawesome.posawesome.api.utilities.get_translation_dict",
+				args: { lang: language },
+				callback: function (r) {
+					if (!r.exc && r.message) {
+						$.extend(frappe._messages, r.message);
+						import("/assets/posawesome/js/offline/index.js")
+							.then((m) => {
+								if (m && m.saveTranslationsCache) {
+									m.saveTranslationsCache(language, r.message);
+								}
+							})
+							.catch(() => {});
+					}
+					resolve();
+				},
+			});
+		} else {
+			import("/assets/posawesome/js/offline/index.js")
+				.then((m) => {
+					if (m && m.getTranslationsCache) {
+						const cached = m.getTranslationsCache(language);
+						if (cached) $.extend(frappe._messages, cached);
+					}
+					resolve();
+				})
+				.catch(() => resolve());
+		}
 	});
 }

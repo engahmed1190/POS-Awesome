@@ -1,6 +1,9 @@
-import { db, persist, checkDbHealth } from "./core.js";
+import { db, persist, checkDbHealth, terminatePersistWorker, initPersistWorker } from "./core.js";
 import { getAllByCursor } from "./db-utils.js";
-import Dexie from "dexie";
+import Dexie from "dexie/dist/dexie.mjs";
+
+// Increment this number whenever the cache data structure changes
+export const CACHE_VERSION = 1;
 
 export const MAX_QUEUE_ITEMS = 1000;
 
@@ -20,11 +23,16 @@ export const memory = {
 	pos_opening_storage: null,
 	opening_dialog_storage: null,
 	sales_persons_storage: [],
-	price_list_cache: {},
-	item_details_cache: {},
-	tax_template_cache: {},
-	tax_inclusive: false,
-	manual_offline: false,
+        price_list_cache: {},
+        item_details_cache: {},
+        tax_template_cache: {},
+        translation_cache: {},
+        coupons_cache: {},
+        // Track the current cache schema version
+        cache_version: CACHE_VERSION,
+        cache_ready: false,
+        tax_inclusive: false,
+        manual_offline: false,
 };
 
 // Initialize memory from IndexedDB and expose a promise for consumers
@@ -49,6 +57,24 @@ export const memoryInitPromise = (async () => {
 				}
 			}
 		}
+
+		// Verify cache version and clear outdated caches
+		const versionEntry = await db.table("keyval").get("cache_version");
+		let storedVersion = versionEntry ? versionEntry.value : null;
+		if (!storedVersion && typeof localStorage !== "undefined") {
+			const v = localStorage.getItem("posa_cache_version");
+			if (v) storedVersion = parseInt(v, 10);
+		}
+		if (storedVersion !== CACHE_VERSION) {
+			await forceClearAllCache();
+			memory.cache_version = CACHE_VERSION;
+			persist("cache_version", CACHE_VERSION);
+		} else {
+			memory.cache_version = storedVersion || CACHE_VERSION;
+		}
+		// Mark caches initialized
+		memory.cache_ready = true;
+		persist("cache_ready", true);
 	} catch (e) {
 		console.error("Failed to initialize memory from DB", e);
 	}
@@ -161,6 +187,27 @@ export function setTaxTemplate(name, doc) {
 	}
 }
 
+export function getTranslationsCache(lang) {
+	try {
+		const cache = memory.translation_cache || {};
+		return cache[lang] || null;
+	} catch (e) {
+		console.error("Failed to get cached translations", e);
+		return null;
+	}
+}
+
+export function saveTranslationsCache(lang, data) {
+	try {
+		const cache = memory.translation_cache || {};
+		cache[lang] = data;
+		memory.translation_cache = cache;
+		persist("translation_cache", memory.translation_cache);
+	} catch (e) {
+		console.error("Failed to cache translations", e);
+	}
+}
+
 export function setLastSyncTotals(totals) {
 	memory.pos_last_sync_totals = totals;
 	persist("pos_last_sync_totals", memory.pos_last_sync_totals);
@@ -177,6 +224,10 @@ export function getTaxInclusiveSetting() {
 export function setTaxInclusiveSetting(value) {
 	memory.tax_inclusive = !!value;
 	persist("tax_inclusive", memory.tax_inclusive);
+}
+
+export function isCacheReady() {
+	return !!memory.cache_ready;
 }
 
 export function isManualOffline() {
@@ -217,11 +268,13 @@ export function purgeOldQueueEntries(limit = MAX_QUEUE_ITEMS) {
 export async function clearAllCache() {
 	try {
 		await checkDbHealth();
+		terminatePersistWorker();
 		if (db.isOpen()) {
 			await db.close();
 		}
 		await Dexie.delete("posawesome_offline");
 		await db.open();
+		initPersistWorker();
 	} catch (e) {
 		console.error("Failed to clear IndexedDB cache", e);
 	}
@@ -238,9 +291,10 @@ export async function clearAllCache() {
 	memory.offline_customers = [];
 	memory.offline_payments = [];
 	memory.pos_last_sync_totals = { pending: 0, synced: 0, drafted: 0 };
-	memory.uom_cache = {};
-	memory.offers_cache = [];
-	memory.customer_balance_cache = {};
+        memory.uom_cache = {};
+        memory.offers_cache = [];
+        memory.coupons_cache = {};
+        memory.customer_balance_cache = {};
 	memory.local_stock_cache = {};
 	memory.stock_cache_ready = false;
 	memory.items_storage = [];
@@ -251,8 +305,55 @@ export async function clearAllCache() {
 	memory.price_list_cache = {};
 	memory.item_details_cache = {};
 	memory.tax_template_cache = {};
+	memory.cache_version = CACHE_VERSION;
 	memory.tax_inclusive = false;
 	memory.manual_offline = false;
+
+	persist("cache_version", CACHE_VERSION);
+}
+
+// Faster cache clearing without reopening the database
+export async function forceClearAllCache() {
+	terminatePersistWorker();
+	if (typeof localStorage !== "undefined") {
+		Object.keys(localStorage).forEach((key) => {
+			if (key.startsWith("posa_")) {
+				localStorage.removeItem(key);
+			}
+		});
+	}
+
+	memory.offline_invoices = [];
+	memory.offline_customers = [];
+	memory.offline_payments = [];
+	memory.pos_last_sync_totals = { pending: 0, synced: 0, drafted: 0 };
+        memory.uom_cache = {};
+        memory.offers_cache = [];
+        memory.coupons_cache = {};
+        memory.customer_balance_cache = {};
+	memory.local_stock_cache = {};
+	memory.stock_cache_ready = false;
+	memory.items_storage = [];
+	memory.customer_storage = [];
+	memory.pos_opening_storage = null;
+	memory.opening_dialog_storage = null;
+	memory.sales_persons_storage = [];
+	memory.price_list_cache = {};
+	memory.item_details_cache = {};
+	memory.tax_template_cache = {};
+	memory.cache_version = CACHE_VERSION;
+	memory.tax_inclusive = false;
+	memory.manual_offline = false;
+
+	// Delete the IndexedDB database in the background
+	try {
+		await Dexie.delete("posawesome_offline");
+		initPersistWorker();
+	} catch (e) {
+		console.error("Failed to clear IndexedDB cache", e);
+	}
+
+	persist("cache_version", CACHE_VERSION);
 }
 
 /**

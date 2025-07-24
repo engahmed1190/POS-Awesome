@@ -39,6 +39,7 @@ export function saveOfflineInvoice(entry) {
 }
 
 export function isOffline() {
+	// Use cached data when running offline
 	if (typeof window === "undefined") {
 		// Not in a browser (SSR/Node), assume online (or handle explicitly if needed)
 		return memory.manual_offline || false;

@@ -236,15 +236,19 @@ def apply_tax_inclusive(doc):
 	except Exception:
 		tax_inclusive = 0
 
-	if not tax_inclusive:
-		return
-
 	has_changes = False
 	for tax in doc.get("taxes", []):
-		if not tax.included_in_print_rate:
+		if tax.charge_type == "Actual":
+			if tax.included_in_print_rate:
+				tax.included_in_print_rate = 0
+				has_changes = True
+		continue
+		if tax_inclusive and not tax.included_in_print_rate:
 			tax.included_in_print_rate = 1
 			has_changes = True
-
+		elif not tax_inclusive and tax.included_in_print_rate:
+			tax.included_in_print_rate = 0
+			has_changes = True
 	if has_changes:
 		doc.calculate_taxes_and_totals()
 

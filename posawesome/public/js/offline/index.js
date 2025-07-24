@@ -1,7 +1,15 @@
 // Main entry point - re-exports all functions for backward compatibility
 
 // Core exports
-export { db, initPromise, persist, addToPersistQueue, checkDbHealth } from "./core.js";
+export {
+	db,
+	initPromise,
+	persist,
+	addToPersistQueue,
+	checkDbHealth,
+	initPersistWorker,
+	terminatePersistWorker,
+} from "./core.js";
 
 // Cache exports
 export {
@@ -32,7 +40,9 @@ export {
 	MAX_QUEUE_ITEMS,
 	resetOfflineState,
 	clearAllCache,
+	forceClearAllCache,
 	getCacheUsageEstimate,
+	isCacheReady,
 } from "./cache.js";
 
 // Stock exports
@@ -88,8 +98,18 @@ export {
 
 // Customers exports
 export {
-	saveCustomerBalance,
-	getCachedCustomerBalance,
-	clearCustomerBalanceCache,
-	clearExpiredCustomerBalances,
+        saveCustomerBalance,
+        getCachedCustomerBalance,
+        clearCustomerBalanceCache,
+        clearExpiredCustomerBalances,
 } from "./customers.js";
+
+// Coupons exports
+export {
+        saveCoupons,
+        getCachedCoupons,
+        clearCoupons,
+} from "./coupons.js";
+
+// Translation cache exports
+export { getTranslationsCache, saveTranslationsCache } from "./cache.js";

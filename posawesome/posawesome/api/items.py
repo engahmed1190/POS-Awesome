@@ -1,20 +1,19 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) 2020, Youssef Restom and contributors
 # For license information, please see license.txt
 
-from __future__ import unicode_literals
 import json
+
 import frappe
-from frappe.utils import nowdate, flt, cstr
-from erpnext.stock.get_item_details import get_item_details
 from erpnext.accounts.doctype.pos_profile.pos_profile import get_item_groups
-from frappe.utils.background_jobs import enqueue
 from erpnext.stock.doctype.batch.batch import (
 	get_batch_no,
 	get_batch_qty,
 )
+from erpnext.stock.get_item_details import get_item_details
+from frappe import _
+from frappe.utils import cstr, flt, nowdate
+from frappe.utils.background_jobs import enqueue
 from frappe.utils.caching import redis_cache
-from typing import List, Dict
 
 
 def get_seearch_items_conditions(item_code, serial_no, batch_no, barcode):
@@ -23,7 +22,7 @@ def get_seearch_items_conditions(item_code, serial_no, batch_no, barcode):
 	item_code = item_code or ""
 
 	if serial_no or batch_no or barcode:
-		return " and name = {0}".format(frappe.db.escape(item_code))
+		return f" and name = {frappe.db.escape(item_code)}"
 
 	return """ and (name like {item_code} or item_name like {item_code})""".format(
 		item_code=frappe.db.escape("%" + item_code + "%")
@@ -34,48 +33,9 @@ def get_item_group_condition(pos_profile):
 	cond = " and 1=1"
 	item_groups = get_item_groups(pos_profile)
 	if item_groups:
-		cond = " and item_group in (%s)" % (", ".join(["%s"] * len(item_groups)))
+		cond = " and item_group in ({})".format(", ".join(["%s"] * len(item_groups)))
 
 	return cond % tuple(item_groups)
-
-
-def search_serial_or_batch_or_barcode_number(search_value, search_serial_no):
-	"""Search for items by serial number, batch number, or barcode."""
-	# Search by barcode
-	barcode_data = frappe.db.get_value(
-		"Item Barcode",
-		{"barcode": search_value},
-		["parent as item_code", "barcode"],
-		as_dict=True,
-	)
-	if barcode_data:
-		return {"item_code": barcode_data.item_code, "barcode": barcode_data.barcode}
-
-	# Search by batch number
-	batch_data = frappe.db.get_value(
-		"Batch",
-		{"name": search_value},
-		["item as item_code", "name as batch_no"],
-		as_dict=True,
-	)
-	if batch_data:
-		return {"item_code": batch_data.item_code, "batch_no": batch_data.batch_no}
-
-	# Search by serial number if enabled
-	if search_serial_no:
-		serial_data = frappe.db.get_value(
-			"Serial No",
-			{"name": search_value},
-			["item_code", "name as serial_no"],
-			as_dict=True,
-		)
-		if serial_data:
-			return {
-				"item_code": serial_data.item_code,
-				"serial_no": serial_data.serial_no,
-			}
-
-	return {}
 
 
 def get_stock_availability(item_code, warehouse):
@@ -147,7 +107,7 @@ def get_items(
 			elif frappe.cache().get_value("bin_qty_cache"):
 				frappe.cache().delete_value("bin_qty_cache")
 		except Exception as e:
-			frappe.log_error(f"Error clearing bin_qty_cache: {str(e)}", "POS Awesome")
+			frappe.log_error(f"Error clearing bin_qty_cache: {e!s}", "POS Awesome")
 
 		today = nowdate()
 		warehouse = pos_profile.get("warehouse")
@@ -196,10 +156,10 @@ def get_items(
 			if item_group:
 				# Escape item_group to avoid SQL errors with special characters
 				safe_item_group = frappe.db.escape("%" + item_group + "%")
-				condition += " AND item_group like {item_group}".format(item_group=safe_item_group)
+				condition += f" AND item_group like {safe_item_group}"
 
 			# Always apply a search limit when limit search is enabled
-			limit_clause = " LIMIT {search_limit}".format(search_limit=search_limit)
+			limit_clause = f" LIMIT {search_limit}"
 
 			# If force reload is enabled and the user is explicitly searching,
 			# remove the limit to return all matching items
@@ -216,6 +176,7 @@ def get_items(
 
 		# Add item group filter
 		item_groups = get_item_groups(pos_profile.get("name"))
+		item_groups = [g.strip("'") for g in item_groups]
 		if item_groups:
 			filters["item_group"] = ["in", item_groups]
 
@@ -235,7 +196,7 @@ def get_items(
 				filters["name"] = data.get("item_code")
 				or_filters = []
 
-		if item_group:
+		if item_group and item_group.upper() != "ALL":
 			filters["item_group"] = ["like", f"%{item_group}%"]
 
 		if not posa_show_template_items:
@@ -421,9 +382,88 @@ def get_items(
 def get_items_groups():
 	return frappe.db.sql(
 		"""select name from `tabItem Group`
-        where is_group = 0 order by name limit 500""",
+	    where is_group = 0 order by name limit 500""",
 		as_dict=1,
 	)
+
+
+@frappe.whitelist()
+def get_item_variants(pos_profile, parent_item_code, price_list=None, customer=None):
+	"""Return variants of an item along with attribute metadata."""
+	pos_profile = json.loads(pos_profile)
+	price_list = price_list or pos_profile.get("selling_price_list")
+
+	fields = [
+		"name as item_code",
+		"item_name",
+		"description",
+		"stock_uom",
+		"image",
+		"is_stock_item",
+		"has_variants",
+		"variant_of",
+		"item_group",
+		"idx",
+		"has_batch_no",
+		"has_serial_no",
+		"max_discount",
+		"brand",
+	]
+
+	items_data = frappe.get_all(
+		"Item",
+		filters={"variant_of": parent_item_code, "disabled": 0},
+		fields=fields,
+		order_by="item_name asc",
+	)
+
+	if not items_data:
+		return {"variants": [], "attributes_meta": {}}
+
+	details = get_items_details(
+		json.dumps(pos_profile),
+		json.dumps(items_data),
+		price_list=price_list,
+	)
+
+	detail_map = {d["item_code"]: d for d in details}
+	result = []
+	for item in items_data:
+		item_barcode = frappe.get_all(
+			"Item Barcode",
+			filters={"parent": item["item_code"]},
+			fields=["barcode", "posa_uom"],
+		)
+		item["item_barcode"] = item_barcode or []
+		if detail_map.get(item["item_code"]):
+			item.update(detail_map[item["item_code"]])
+		result.append(item)
+
+	# --------------------------
+	# Build attributes meta *and* per-item attribute list
+	# --------------------------
+	attr_rows = frappe.get_all(
+		"Item Variant Attribute",
+		filters={"parent": ["in", [d["item_code"] for d in items_data]]},
+		fields=["parent", "attribute", "attribute_value"],
+	)
+
+	from collections import defaultdict
+
+	attributes_meta: dict[str, set] = defaultdict(set)
+	item_attr_map: dict[str, list] = defaultdict(list)
+
+	for row in attr_rows:
+		attributes_meta[row.attribute].add(row.attribute_value)
+		item_attr_map[row.parent].append({"attribute": row.attribute, "attribute_value": row.attribute_value})
+
+	attributes_meta = {k: sorted(v) for k, v in attributes_meta.items()}
+
+	for item in result:
+		item["item_attributes"] = item_attr_map.get(item["item_code"], [])
+
+	# Ensure attributes_meta is always a dictionary
+	return {"variants": result, "attributes_meta": attributes_meta or {}}
 
 
 @frappe.whitelist()
@@ -431,7 +471,11 @@ def get_items_details(pos_profile, items_data, price_list=None):
 	pos_profile = json.loads(pos_profile)
 	items_data = json.loads(items_data)
 	warehouse = pos_profile.get("warehouse")
-	company = pos_profile.get("company")
+	company = (
+		pos_profile.get("company")
+		or frappe.defaults.get_user_default("Company")
+		or frappe.defaults.get_global_default("company")
+	)
 	result = []
 
 	if items_data:
@@ -498,9 +542,13 @@ def get_item_detail(item, doc=None, warehouse=None, price_list=None, company=Non
 	# Ensure conversion rate exists when price list currency differs from
 	# company currency to avoid ValidationError from ERPNext. Also provide
 	# sensible defaults when price list or currency is missing.
-	if company and price_list:
+	if company:
 		company_currency = frappe.db.get_value("Company", company, "default_currency")
-		price_list_currency = frappe.db.get_value("Price List", price_list, "currency") or company_currency
+		price_list_currency = company_currency
+		if price_list:
+			price_list_currency = (
+				frappe.db.get_value("Price List", price_list, "currency") or company_currency
+			)
 
 		exchange_rate = 1
 		if price_list_currency != company_currency and allow_multi_currency:
@@ -676,3 +724,57 @@ def search_serial_or_batch_or_barcode_number(search_value, search_serial_no):
 			}
 
 	return {}
+
+
+@frappe.whitelist()
+def update_price_list_rate(item_code, price_list, rate, uom=None):
+	"""Create or update Item Price for the given item and price list."""
+	if not item_code or not price_list:
+		frappe.throw(_("Item Code and Price List are required"))
+
+	rate = flt(rate)
+	filters = {"item_code": item_code, "price_list": price_list}
+	if uom:
+		filters["uom"] = uom
+	else:
+		filters["uom"] = ["", None]
+
+	name = frappe.db.exists("Item Price", filters)
+	if name:
+		doc = frappe.get_doc("Item Price", name)
+		doc.price_list_rate = rate
+		doc.save(ignore_permissions=True)
+	else:
+		doc = frappe.get_doc(
+			{
+				"doctype": "Item Price",
+				"item_code": item_code,
+				"price_list": price_list,
+				"uom": uom,
+				"price_list_rate": rate,
+				"selling": 1,
+			}
+		)
+		doc.insert(ignore_permissions=True)
+
+	frappe.db.commit()
+	return _("Item Price has been added or updated")
+
+
+@frappe.whitelist()
+def get_price_for_uom(item_code, price_list, uom):
+	"""Return Item Price for the given item, price list and UOM if it exists."""
+	if not (item_code and price_list and uom):
+		return None
+
+	price = frappe.db.get_value(
+		"Item Price",
+		{
+			"item_code": item_code,
+			"price_list": price_list,
+			"uom": uom,
+			"selling": 1,
+		},
+		"price_list_rate",
+	)
+	return price
