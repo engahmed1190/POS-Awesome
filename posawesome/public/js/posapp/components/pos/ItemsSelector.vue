@@ -768,8 +768,33 @@ export default {
 				console.log("✅ initPromise resolved");
 
 				console.log("⏳ Waiting for checkDbHealth...");
-				await checkDbHealth();
-				console.log("✅ checkDbHealth resolved");
+				let dbHealthy;
+				try {
+					dbHealthy = await checkDbHealth();
+					console.log("✅ checkDbHealth resolved");
+				} catch (err) {
+					console.error("⚠️ checkDbHealth failed or timed out:", err);
+					dbHealthy = false;
+				}
+
+				if (!dbHealthy) {
+					console.warn("Local storage unavailable, falling back to server");
+					if (typeof frappe !== "undefined" && frappe.show_alert) {
+						frappe.show_alert(
+							{
+								message: __("Offline storage unavailable; loading from server"),
+								indicator: "red",
+							},
+							5,
+						);
+					}
+					try {
+						await this.get_items(true);
+					} catch (e) {
+						console.error("Failed to load items from server after DB failure", e);
+					}
+					return;
+				}
 
 				if (reset) {
 					console.log("🔄 Resetting items array");
@@ -1126,7 +1151,11 @@ export default {
 		},
 		async get_items(force_server = false) {
 			await initPromise;
-			await checkDbHealth();
+			try {
+				await checkDbHealth();
+			} catch (err) {
+				console.warn("checkDbHealth failed during get_items", err);
+			}
 			const request_token = ++this.items_request_token;
 			if (!this.pos_profile) {
 				console.error("No POS Profile");
@@ -2820,7 +2849,11 @@ export default {
 				console.log("POS Profile registered:", data.pos_profile.name);
 				await initPromise;
 				await memoryInitPromise;
-				await checkDbHealth();
+				try {
+					await checkDbHealth();
+				} catch (err) {
+					console.warn("checkDbHealth failed during profile registration", err);
+				}
 				this.pos_profile = data.pos_profile;
 				// Update page limit whenever profile is registered
 				this.itemsPageLimit = this.pos_profile.posa_local_storage ? 500 : 10000;

@@ -31,36 +31,44 @@ function isCorruptionError(err) {
 	);
 }
 
-export async function checkDbHealth() {
-	try {
-		await db.table(tableForKey("health_check")).get("health_check");
-		return true;
-	} catch (e) {
-		console.error("IndexedDB health check failed", e);
+export async function checkDbHealth(timeoutMs = 5000) {
+	const healthPromise = (async () => {
 		try {
-			if (db.isOpen()) {
-				await db.close();
-			}
-			console.log("Attempting to reopen IndexedDB without deleting");
-			await db.open();
-			console.log("IndexedDB reopened successfully");
+			await db.table(tableForKey("health_check")).get("health_check");
 			return true;
-		} catch (re) {
-			console.error("Failed to reopen IndexedDB", re);
-			if (isCorruptionError(re)) {
-				console.log("IndexedDB appears corrupted. Recreating database...");
-				try {
-					await Dexie.delete("posawesome_offline");
-					await db.open();
-					console.log("IndexedDB recreated and opened successfully");
-					return true;
-				} catch (recreateErr) {
-					console.error("Failed to recreate IndexedDB", recreateErr);
+		} catch (e) {
+			console.error("IndexedDB health check failed", e);
+			try {
+				if (db.isOpen()) {
+					await db.close();
 				}
+				console.log("Attempting to reopen IndexedDB without deleting");
+				await db.open();
+				console.log("IndexedDB reopened successfully");
+				return true;
+			} catch (re) {
+				console.error("Failed to reopen IndexedDB", re);
+				if (isCorruptionError(re)) {
+					console.log("IndexedDB appears corrupted. Recreating database...");
+					try {
+						await Dexie.delete("posawesome_offline");
+						await db.open();
+						console.log("IndexedDB recreated and opened successfully");
+						return true;
+					} catch (recreateErr) {
+						console.error("Failed to recreate IndexedDB", recreateErr);
+					}
+				}
+				return false;
 			}
-			return false;
 		}
-	}
+	})();
+
+	const timeoutPromise = new Promise((_, reject) =>
+		setTimeout(() => reject(new Error("IndexedDB health check timed out")), timeoutMs),
+	);
+
+	return Promise.race([healthPromise, timeoutPromise]);
 }
 
 let persistWorker = null;
@@ -73,7 +81,7 @@ export function initPersistWorker() {
 		const workerUrl = "/assets/posawesome/js/posapp/workers/itemWorker.js";
 		try {
 			persistWorker = new Worker(workerUrl, { type: "classic" });
-		} catch (err) {
+		} catch {
 			persistWorker = new Worker(workerUrl, { type: "module" });
 		}
 	} catch (e) {
