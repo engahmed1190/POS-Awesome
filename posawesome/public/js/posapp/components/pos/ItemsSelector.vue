@@ -399,8 +399,9 @@ import {
         getCachedItemGroups,
         getItemsLastSync,
         forceClearAllCache,
+        clearStoredItems,
+        setItemsLastSync,
 } from "../../../offline/index.js";
-import { clearStoredItems, setItemsLastSync } from "../../../offline/cache.js";
 import { useResponsive } from "../../composables/useResponsive.js";
 
 export default {
