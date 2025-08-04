@@ -646,22 +646,22 @@ export default {
 	methods: {
 		// Performance optimization: Memoized search function
 		memoizedSearch(searchTerm, itemGroup) {
-			const cacheKey = `${searchTerm || ''}_${itemGroup || 'ALL'}`;
-			
+			const cacheKey = `${searchTerm || ""}_${itemGroup || "ALL"}`;
+
 			// Check if we have a cached result
 			if (this.searchCache && this.searchCache.has(cacheKey)) {
 				const cachedResult = this.searchCache.get(cacheKey);
 				return cachedResult;
 			}
-			
+
 			// Perform the search
 			const result = this.performSearch(searchTerm, itemGroup);
-			
+
 			// Cache the result
 			if (this.searchCache) {
 				this.searchCache.set(cacheKey, result);
 			}
-			
+
 			return result;
 		},
 
@@ -669,23 +669,25 @@ export default {
 			if (!this.items || !this.items.length) {
 				return [];
 			}
-			
+
 			let filtered = this.items;
-			
+
 			// Filter by item group
 			if (itemGroup !== "ALL") {
-				filtered = filtered.filter(item => 
-					item.item_group && item.item_group.toLowerCase().includes(itemGroup.toLowerCase())
+				filtered = filtered.filter(
+					(item) =>
+						item.item_group && item.item_group.toLowerCase().includes(itemGroup.toLowerCase()),
 				);
 			}
-			
+
 			// Filter by search term only if it exists and is long enough
 			if (searchTerm && searchTerm.trim() && searchTerm.trim().length >= 3) {
 				const term = searchTerm.toLowerCase();
-				filtered = filtered.filter(item => 
-					item.item_code.toLowerCase().includes(term) ||
-					item.item_name.toLowerCase().includes(term) ||
-					(item.item_barcode && item.item_barcode.some(b => b.barcode === searchTerm))
+				filtered = filtered.filter(
+					(item) =>
+						item.item_code.toLowerCase().includes(term) ||
+						item.item_name.toLowerCase().includes(term) ||
+						(item.item_barcode && item.item_barcode.some((b) => b.barcode === searchTerm)),
 				);
 			}
 			
@@ -718,20 +720,20 @@ export default {
 				try {
 					const el = this.$refs.itemsContainer;
 					if (!el) return;
-					
+
 					const scrollTop = el.scrollTop;
 					const clientHeight = el.clientHeight;
 					const scrollHeight = el.scrollHeight;
-					
+
 					// Only trigger load more if we're near the bottom
 					if (scrollTop + clientHeight >= scrollHeight - 50) {
 						this.currentPage += 1;
 						this.loadVisibleItems();
 					}
-					
+
 					this.lastScrollTop = scrollTop;
 				} catch (error) {
-					console.error('Error in card scroll handler:', error);
+					console.error("Error in card scroll handler:", error);
 				} finally {
 					this.scrollThrottle = null;
 				}
@@ -740,7 +742,7 @@ export default {
 
 		onListScroll(event) {
 			if (this.scrollThrottle) return;
-			
+
 			this.scrollThrottle = requestAnimationFrame(() => {
 				try {
 					const el = event.target;
@@ -749,7 +751,7 @@ export default {
 						this.loadVisibleItems();
 					}
 				} catch (error) {
-					console.error('Error in list scroll handler:', error);
+					console.error("Error in list scroll handler:", error);
 				} finally {
 					this.scrollThrottle = null;
 				}
@@ -761,23 +763,24 @@ export default {
 				console.log("⏳ Waiting for initPromise...");
 				await initPromise;
 				console.log("✅ initPromise resolved");
-				
+
 				console.log("⏳ Waiting for checkDbHealth...");
 				await checkDbHealth();
 				console.log("✅ checkDbHealth resolved");
-				
+
 				if (reset) {
 					console.log("🔄 Resetting items array");
 					this.currentPage = 0;
 					this.items = [];
 				}
-				
+
 				console.log("🔍 Getting search parameters...");
 				const search = this.get_search(this.first_search);
 				const itemGroup = this.item_group !== "ALL" ? this.item_group.toLowerCase() : "";
 				console.log("📝 Search:", search, "ItemGroup:", itemGroup);
-				
+
 				console.log("⏳ Calling searchStoredItems...");
+        
                                 const pageItems = await searchStoredItems({
                                         search,
                                         itemGroup,
@@ -795,13 +798,13 @@ export default {
                                 else this.items = [...this.items, ...pageItems];
 				
 				console.log("📊 Total items after update:", this.items.length);
-				
+
 				// Clear search cache when items are updated
 				if (this.searchCache) {
 					this.searchCache.clear();
 					console.log("🗑️ Search cache cleared");
 				}
-				
+
 				this.eventBus.emit("set_all_items", this.items);
 				if (pageItems.length) {
 					console.log("🔄 Updating items details...");
@@ -957,10 +960,10 @@ export default {
 					limit: 50,
 					offset: 0,
 				};
-				
+
 				const controller = new AbortController();
 				const timeoutId = setTimeout(() => controller.abort(), 5000);
-				
+
 				const response = await fetch("/api/method/posawesome.posawesome.api.items.get_items", {
 					method: "POST",
 					headers: {
@@ -973,31 +976,31 @@ export default {
 				});
 
 				clearTimeout(timeoutId);
-				
+
 				if (response.ok) {
 					const data = await response.json();
-					
+
 					if (data.message && Array.isArray(data.message)) {
 						this.items = data.message;
 						console.log("✅ Items loaded successfully:", this.items.length, "items");
-						
+
 						// Set default quantities immediately for instant display
-						this.items.forEach(item => {
+						this.items.forEach((item) => {
 							item.actual_qty = 0; // Set default quantity
 						});
-						
+
 						// Clear search cache when new items are loaded
 						if (this.searchCache) {
 							this.searchCache.clear();
 						}
-						
+
 						this.eventBus.emit("set_all_items", this.items);
-						
+
 						// Force a reactive update immediately
 						this.$nextTick(() => {
 							this.$forceUpdate();
 						});
-						
+
 						// Load quantities in background (non-blocking)
 						setTimeout(() => {
 							this.update_items_details(this.items);
@@ -1012,7 +1015,7 @@ export default {
 				console.error("❌ Error in forceLoadItems:", error.message);
 			}
 		},
-		
+
 		// Debug method - can be called from browser console
 		debugItemsState() {
 			console.log("=== ItemsSelector Debug Info ===");
@@ -1025,46 +1028,58 @@ export default {
 			console.log("Loading state:", this.loading);
 			console.log("Current page:", this.currentPage);
 			console.log("Items per page:", this.itemsPerPage);
-			
+
 			// Show first few items for debugging
 			if (this.items && this.items.length > 0) {
-				console.log("First 3 items:", this.items.slice(0, 3).map(item => ({
-					item_code: item.item_code,
-					item_name: item.item_name,
-					item_group: item.item_group,
-					actual_qty: item.actual_qty
-				})));
+				console.log(
+					"First 3 items:",
+					this.items.slice(0, 3).map((item) => ({
+						item_code: item.item_code,
+						item_name: item.item_name,
+						item_group: item.item_group,
+						actual_qty: item.actual_qty,
+					})),
+				);
 			}
-			
+
 			// Show filtered items quantities
 			if (this.filtered_items && this.filtered_items.length > 0) {
-				console.log("First 3 filtered items quantities:", this.filtered_items.slice(0, 3).map(item => ({
-					item_code: item.item_code,
-					actual_qty: item.actual_qty
-				})));
+				console.log(
+					"First 3 filtered items quantities:",
+					this.filtered_items.slice(0, 3).map((item) => ({
+						item_code: item.item_code,
+						actual_qty: item.actual_qty,
+					})),
+				);
 			}
-			
+
 			// Test direct search
 			console.log("Direct search test:");
 			const directResult = this.performSearch(this.search, this.item_group);
 			console.log("Direct search result:", directResult.length);
-			
+
 			console.log("================================");
 		},
-		
+
 		// Debug quantities specifically
 		debugQuantities() {
 			console.log("=== Quantities Debug ===");
 			if (this.filtered_items && this.filtered_items.length > 0) {
 				console.log(`Total items: ${this.filtered_items.length}`);
-				console.log(`Items with quantities: ${this.filtered_items.filter(item => item.actual_qty !== undefined && item.actual_qty !== null).length}`);
-				console.log(`Items without quantities: ${this.filtered_items.filter(item => item.actual_qty === undefined || item.actual_qty === null).length}`);
-				
+				console.log(
+					`Items with quantities: ${this.filtered_items.filter((item) => item.actual_qty !== undefined && item.actual_qty !== null).length}`,
+				);
+				console.log(
+					`Items without quantities: ${this.filtered_items.filter((item) => item.actual_qty === undefined || item.actual_qty === null).length}`,
+				);
+
 				// Show only items with issues
-				const itemsWithIssues = this.filtered_items.filter(item => item.actual_qty === undefined || item.actual_qty === null);
+				const itemsWithIssues = this.filtered_items.filter(
+					(item) => item.actual_qty === undefined || item.actual_qty === null,
+				);
 				if (itemsWithIssues.length > 0) {
 					console.log("Items missing quantities:");
-					itemsWithIssues.forEach(item => {
+					itemsWithIssues.forEach((item) => {
 						console.log(`- ${item.item_code}: ${item.actual_qty}`);
 					});
 				}
@@ -1073,7 +1088,7 @@ export default {
 			}
 			console.log("========================");
 		},
-		
+
 		async forceReloadItems() {
                        // Clear cached price list items so the reload always
                        // fetches the latest data from the server
@@ -1935,7 +1950,8 @@ export default {
 							updatedItems.push({
 								item: item,
 								updates: {
-									actual_qty: updated_item.actual_qty !== undefined ? updated_item.actual_qty : 0,
+									actual_qty:
+										updated_item.actual_qty !== undefined ? updated_item.actual_qty : 0,
 									serial_no_data: updated_item.serial_no_data,
 									batch_no_data: updated_item.batch_no_data,
 									has_batch_no: updated_item.has_batch_no,
@@ -1961,7 +1977,7 @@ export default {
 					updatedItems.forEach(({ item, updates }) => {
 						Object.assign(item, updates);
 						vm.applyCurrencyConversionToItem(item);
-						
+
 						// Force update for this specific item
 						vm.$nextTick(() => {
 							vm.$forceUpdate();
@@ -2014,12 +2030,12 @@ export default {
 				this.update_items_details(this.filtered_items);
 			}
 		},
-		
+
 		// Force load quantities for all visible items
 		forceLoadQuantities() {
 			if (this.filtered_items && this.filtered_items.length > 0) {
 				// Set default quantities if not available
-				this.filtered_items.forEach(item => {
+				this.filtered_items.forEach((item) => {
 					if (item.actual_qty === undefined || item.actual_qty === null) {
 						item.actual_qty = 0;
 					}
@@ -2028,18 +2044,18 @@ export default {
 				this.update_items_details(this.filtered_items);
 			}
 		},
-		
+
 		// Ensure all items have quantities set
 		ensureAllItemsHaveQuantities() {
 			if (this.items && this.items.length > 0) {
-				this.items.forEach(item => {
+				this.items.forEach((item) => {
 					if (item.actual_qty === undefined || item.actual_qty === null) {
 						item.actual_qty = 0;
 					}
 				});
 			}
 			if (this.filtered_items && this.filtered_items.length > 0) {
-				this.filtered_items.forEach(item => {
+				this.filtered_items.forEach((item) => {
 					if (item.actual_qty === undefined || item.actual_qty === null) {
 						item.actual_qty = 0;
 					}
@@ -2242,7 +2258,7 @@ export default {
 				this.processScannedItem(scannedCode);
 			}, 300);
 		},
-		processScannedItem(scannedCode) {
+		async processScannedItem(scannedCode) {
 			// First try to find exact match by barcode
 			let foundItem = this.items.find(
 				(item) =>
@@ -2257,18 +2273,51 @@ export default {
 				return;
 			}
 
-			// If no exact match, try partial search
-			const searchResults = this.searchItemsByCode(scannedCode);
+			// If not found locally, attempt to fetch from server by barcode
+			try {
+				const res = await frappe.call({
+					method: "posawesome.posawesome.api.items.get_items_from_barcode",
+					args: {
+						selling_price_list: this.active_price_list,
+						currency: this.pos_profile.currency,
+						barcode: scannedCode,
+					},
+				});
 
-			if (searchResults.length === 1) {
-				console.log("Found item by search:", searchResults[0]);
-				this.addScannedItemToInvoice(searchResults[0], scannedCode);
-			} else if (searchResults.length > 1) {
-				// Multiple matches - show selection dialog
-				this.showMultipleItemsDialog(searchResults, scannedCode);
-			} else {
-				// No matches found
-				this.handleItemNotFound(scannedCode);
+				if (res && res.message) {
+					const newItem = res.message;
+					this.items.push(newItem);
+
+					if (this.searchCache) {
+						this.searchCache.clear();
+					}
+
+					await saveItems(this.items);
+					await savePriceListItems(this.customer_price_list, this.items);
+					this.eventBus.emit("set_all_items", this.items);
+					await this.update_items_details([newItem]);
+					this.addScannedItemToInvoice(newItem, scannedCode);
+					return;
+				}
+
+				frappe.show_alert(
+					{
+						message: `Item not found: ${scannedCode}`,
+						indicator: "red",
+					},
+					5,
+				);
+				return;
+			} catch (e) {
+				console.error("Error fetching item from barcode:", e);
+				frappe.show_alert(
+					{
+						message: `Item not found: ${scannedCode}`,
+						indicator: "red",
+					},
+					5,
+				);
+				return;
 			}
 		},
 		searchItemsByCode(code) {
@@ -2403,7 +2452,6 @@ export default {
 			this.trigger_onscan(scannedCode);
 		},
 
-
 		format_currency(value, currency, precision) {
 			const prec = typeof precision === "number" ? precision : this.currency_precision;
 			return this.formatCurrency(value, prec);
@@ -2519,13 +2567,17 @@ export default {
 		},
 		filtered_items() {
 			this.search = this.get_search(this.first_search).trim();
-			
+
 			// Use memoized search for better performance
 			let filteredItems = this.memoizedSearch(this.search, this.item_group);
-			
+
 			if (!this.pos_profile || !this.pos_profile.pose_use_limit_search) {
 				// Apply additional filters
-				if (this.pos_profile && this.pos_profile.posa_show_template_items && this.pos_profile.posa_hide_variants_items) {
+				if (
+					this.pos_profile &&
+					this.pos_profile.posa_show_template_items &&
+					this.pos_profile.posa_hide_variants_items
+				) {
 					filteredItems = filteredItems.filter((item) => !item.variant_of);
 				}
 
@@ -2545,9 +2597,9 @@ export default {
 
 				// Ensure all items have quantities set
 				this.ensureAllItemsHaveQuantities();
-				
+
 				// Force load quantities if items don't have proper quantities
-				if (filteredItems.length > 0 && filteredItems.some(item => item.actual_qty === 0)) {
+				if (filteredItems.length > 0 && filteredItems.some((item) => item.actual_qty === 0)) {
 					this.$nextTick(() => {
 						this.forceLoadQuantities();
 					});
@@ -2617,7 +2669,7 @@ export default {
 					// Adjust page limit based on local storage setting
 					this.itemsPageLimit = profile.posa_local_storage ? 500 : 10000;
 					console.log("ItemsPageLimit set to:", this.itemsPageLimit);
-					
+
 					if (profile.posa_local_storage) {
 						console.log("Loading visible items from local storage");
 						await this.loadVisibleItems(true);
@@ -2633,7 +2685,7 @@ export default {
 		});
 
 		this.loadItemSettings();
-		
+
 		// Add a timeout to ensure items are loaded
 		setTimeout(async () => {
 			if (!this.items || this.items.length === 0) {
@@ -2643,7 +2695,7 @@ export default {
 				console.log("✅ Items loaded successfully within timeout");
 			}
 		}, 3000); // 3 second timeout
-		
+
 		// Expose debug methods globally for troubleshooting
 		window.debugItemsSelector = () => {
 			if (this.debugItemsState) {
@@ -2652,7 +2704,7 @@ export default {
 				console.log("ItemsSelector not ready yet");
 			}
 		};
-		
+
 		window.debugQuantities = () => {
 			if (this.debugQuantities) {
 				this.debugQuantities();
@@ -2660,7 +2712,7 @@ export default {
 				console.log("ItemsSelector not ready yet");
 			}
 		};
-		
+
 		window.forceLoadQuantities = () => {
 			if (this.forceLoadQuantities) {
 				this.forceLoadQuantities();
@@ -2668,7 +2720,7 @@ export default {
 				console.log("ItemsSelector not ready yet");
 			}
 		};
-		
+
 		window.ensureAllItemsHaveQuantities = () => {
 			if (this.ensureAllItemsHaveQuantities) {
 				this.ensureAllItemsHaveQuantities();
@@ -2676,7 +2728,7 @@ export default {
 				console.log("ItemsSelector not ready yet");
 			}
 		};
-		
+
 		window.testDirectApiCall = async () => {
 			if (this.pos_profile) {
 				console.log("🧪 Testing direct API call...");
@@ -2698,7 +2750,7 @@ export default {
 							offset: 0,
 						}),
 					});
-					
+
 					console.log("📥 API Response:", response.status, response.statusText);
 					const data = await response.json();
 					console.log("📦 API Data:", data);
@@ -2711,7 +2763,7 @@ export default {
 				console.log("❌ No POS profile available for API test");
 			}
 		};
-		
+
 		if (typeof Worker !== "undefined") {
 			try {
 				// Use the plain URL so the service worker can match the cached file
@@ -2742,12 +2794,15 @@ export default {
 				this.pos_profile = data.pos_profile;
 				// Update page limit whenever profile is registered
 				this.itemsPageLimit = this.pos_profile.posa_local_storage ? 500 : 10000;
-				
+
 				if (!this.pos_profile.posa_local_storage) {
 					console.log("Loading items from server (no local storage)");
 					await forceClearAllCache();
 					await this.get_items(true);
-				} else if (this.pos_profile.posa_force_reload_items && !this.pos_profile.posa_smart_reload_mode) {
+				} else if (
+					this.pos_profile.posa_force_reload_items &&
+					!this.pos_profile.posa_smart_reload_mode
+				) {
 					console.log("Force reloading items");
 					if (!isOffline()) {
 						await this.get_items(true);
@@ -2758,10 +2813,10 @@ export default {
 					console.log("Loading items normally");
 					await this.get_items();
 				}
-				
+
 				this.get_items_groups();
 				this.items_view = this.pos_profile.posa_default_card_view ? "card" : "list";
-				
+
 				// Ensure items are loaded
 				if (!this.items || this.items.length === 0) {
 					console.log("No items loaded, forcing reload");
