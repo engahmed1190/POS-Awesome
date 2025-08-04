@@ -170,7 +170,7 @@ export function getCachedItemDetails(profileName, priceList, itemCodes, ttl = 15
 
 // Persistent item storage helpers
 
-export async function saveItemsBulk(items) {
+export async function saveItems(items) {
 	try {
 		await checkDbHealth();
 		if (!db.isOpen()) await db.open();
@@ -187,7 +187,7 @@ export async function saveItemsBulk(items) {
 	}
 }
 
-export async function getAllStoredItems() {
+export async function getStoredItems() {
 	try {
 		await checkDbHealth();
 		if (!db.isOpen()) await db.open();

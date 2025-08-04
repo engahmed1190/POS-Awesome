@@ -127,46 +127,6 @@ export function reduceCacheUsage() {
 
 // --- Generic getters and setters for cached data ----------------------------
 
-export async function getStoredItems() {
-	try {
-		await checkDbHealth();
-		if (!db.isOpen()) await db.open();
-		const items = await db.table("items").toArray();
-               return items;
-	} catch (e) {
-		console.error("Failed to get stored items", e);
-		return [];
-	}
-}
-
-export async function saveItems(items) {
-	try {
-		await checkDbHealth();
-		if (!db.isOpen()) await db.open();
-		let cleanItems;
-		try {
-			cleanItems = JSON.parse(JSON.stringify(items));
-		} catch (err) {
-			console.error("Failed to serialize items", err);
-			cleanItems = [];
-		}
-		await db.table("items").bulkPut(cleanItems);
-	} catch (e) {
-		console.error("Failed to save items", e);
-	}
-}
-
-export async function clearStoredItems() {
-        try {
-                await checkDbHealth();
-                if (!db.isOpen()) await db.open();
-                await db.table("items").clear();
-                setItemsLastSync(null);
-        } catch (e) {
-                console.error("Failed to clear stored items", e);
-        }
-}
-
 export function getCustomerStorage() {
 	return memory.customer_storage || [];
 }
