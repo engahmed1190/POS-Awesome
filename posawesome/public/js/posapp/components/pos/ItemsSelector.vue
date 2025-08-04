@@ -376,32 +376,31 @@ import _ from "lodash";
 import CameraScanner from "./CameraScanner.vue";
 import { ensurePosProfile } from "../../../utils/pos_profile.js";
 import {
-	saveItemUOMs,
-	getItemUOMs,
-	getLocalStock,
-	isOffline,
-	initializeStockCache,
-	searchStoredItems,
-	saveItems,
-	clearStoredItems,
-	getLocalStockCache,
-	setLocalStockCache,
-	initPromise,
-	memoryInitPromise,
-	checkDbHealth,
-	getCachedPriceListItems,
-	savePriceListItems,
-	clearPriceListCache,
+        saveItemUOMs,
+        getItemUOMs,
+        getLocalStock,
+        isOffline,
+        initializeStockCache,
+        searchStoredItems,
+        saveItems,
+        getLocalStockCache,
+        setLocalStockCache,
+        initPromise,
+        memoryInitPromise,
+        checkDbHealth,
+        getCachedPriceListItems,
+        savePriceListItems,
+        clearPriceListCache,
 	updateLocalStockCache,
 	isStockCacheReady,
 	getCachedItemDetails,
-	saveItemDetailsCache,
-	saveItemGroups,
-	getCachedItemGroups,
-	getItemsLastSync,
-	setItemsLastSync,
-	forceClearAllCache,
+        saveItemDetailsCache,
+        saveItemGroups,
+        getCachedItemGroups,
+        getItemsLastSync,
+        forceClearAllCache,
 } from "../../../offline/index.js";
+import { clearStoredItems, setItemsLastSync } from "../../../offline/cache.js";
 import { useResponsive } from "../../composables/useResponsive.js";
 
 export default {
@@ -1053,23 +1052,25 @@ export default {
 		},
 		
 		async forceReloadItems() {
-			// Clear cached price list items so the reload always
-			// fetches the latest data from the server
-			await clearPriceListCache();
-			// Always recreate the worker when forcing a reload so
-			// subsequent reloads fetch fresh data from the server.
-			if (!this.itemWorker && typeof Worker !== "undefined") {
-				try {
-					const workerUrl = "/assets/posawesome/js/posapp/workers/itemWorker.js";
-					this.itemWorker = new Worker(workerUrl, { type: "classic" });
-				} catch (e) {
-					console.error("Failed to start item worker", e);
-					this.itemWorker = null;
-				}
-			}
-			this.items_loaded = false;
-			this.get_items(true);
-		},
+                       // Clear cached price list items so the reload always
+                       // fetches the latest data from the server
+                       await clearPriceListCache();
+                       await clearStoredItems();
+                       setItemsLastSync(null);
+                       // Always recreate the worker when forcing a reload so
+                       // subsequent reloads fetch fresh data from the server.
+                       if (!this.itemWorker && typeof Worker !== "undefined") {
+                               try {
+                                       const workerUrl = "/assets/posawesome/js/posapp/workers/itemWorker.js";
+                                       this.itemWorker = new Worker(workerUrl, { type: "classic" });
+                               } catch (e) {
+                                       console.error("Failed to start item worker", e);
+                                       this.itemWorker = null;
+                               }
+                       }
+                       this.items_loaded = false;
+                       this.get_items(true);
+               },
 		async get_items(force_server = false) {
 			await initPromise;
 			await checkDbHealth();
