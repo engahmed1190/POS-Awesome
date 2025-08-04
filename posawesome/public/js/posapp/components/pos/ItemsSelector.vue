@@ -760,16 +760,21 @@ export default {
 				console.log("📝 Search:", search, "ItemGroup:", itemGroup);
 				
 				console.log("⏳ Calling searchStoredItems...");
-				const pageItems = await searchStoredItems({
-					search,
-					itemGroup,
-					limit: this.itemsPerPage,
-					offset: this.currentPage * this.itemsPerPage,
-				});
-				console.log("✅ searchStoredItems returned:", pageItems.length, "items");
-				
-				if (reset) this.items = pageItems;
-				else this.items = [...this.items, ...pageItems];
+                                const pageItems = await searchStoredItems({
+                                        search,
+                                        itemGroup,
+                                        limit: this.itemsPerPage,
+                                        offset: this.currentPage * this.itemsPerPage,
+                                });
+                                console.log("✅ searchStoredItems returned:", pageItems.length, "items");
+
+                                if (!pageItems.length && !isOffline()) {
+                                        await this.get_items(true);
+                                        return;
+                                }
+
+                                if (reset) this.items = pageItems;
+                                else this.items = [...this.items, ...pageItems];
 				
 				console.log("📊 Total items after update:", this.items.length);
 				
