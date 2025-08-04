@@ -420,7 +420,6 @@ export default {
 		loading: false,
 		items_group: ["ALL"],
 		items: [],
-		search: "",
 		first_search: "",
 		search_backup: "",
 		// Optimized pagination with virtual scrolling
@@ -1062,7 +1061,8 @@ export default {
 			console.log("Items count:", this.items ? this.items.length : 0);
 			console.log("Items loaded:", this.items_loaded);
 			console.log("POS Profile:", this.pos_profile ? this.pos_profile.name : "Not loaded");
-			console.log("Search term:", this.search);
+			const searchTerm = this.get_search(this.first_search).trim();
+			console.log("Search term:", searchTerm);
 			console.log("Item group:", this.item_group);
 			console.log("Filtered items count:", this.filtered_items ? this.filtered_items.length : 0);
 			console.log("Loading state:", this.loading);
@@ -1095,7 +1095,7 @@ export default {
 
 			// Test direct search
 			console.log("Direct search test:");
-			const directResult = this.performSearch(this.search, this.item_group);
+			const directResult = this.performSearch(searchTerm, this.item_group);
 			console.log("Direct search result:", directResult.length);
 
 			console.log("================================");
@@ -1367,7 +1367,11 @@ export default {
 							}
 
 							vm.$nextTick(() => {
-								if (vm.search && vm.pos_profile && !vm.pos_profile.pose_use_limit_search) {
+								if (
+									vm.first_search &&
+									vm.pos_profile &&
+									!vm.pos_profile.pose_use_limit_search
+								) {
 									vm.search_onchange();
 								}
 							});
@@ -1461,7 +1465,11 @@ export default {
 							}
 
 							vm.$nextTick(() => {
-								if (vm.search && vm.pos_profile && !vm.pos_profile.pose_use_limit_search) {
+								if (
+									vm.first_search &&
+									vm.pos_profile &&
+									!vm.pos_profile.pose_use_limit_search
+								) {
 									vm.search_onchange();
 								}
 							});
@@ -1501,6 +1509,7 @@ export default {
 		},
 		async backgroundLoadItems(offset, syncSince, clearBefore = false, serverTimestamp = null) {
 			const limit = this.itemsPageLimit;
+			const searchTerm = this.get_search(this.first_search).trim();
 			// When the limit is extremely high, treat it as
 			// "no incremental loading" and exit early.
 			if (!limit || limit >= 10000) {
@@ -1520,7 +1529,7 @@ export default {
 							pos_profile: JSON.stringify(this.pos_profile),
 							price_list: this.customer_price_list,
 							item_group: this.item_group !== "ALL" ? this.item_group.toLowerCase() : "",
-							search_value: this.search || "",
+							search_value: searchTerm || "",
 							customer: this.customer,
 							modified_after: lastSync,
 							limit,
@@ -1570,7 +1579,7 @@ export default {
 						pos_profile: JSON.stringify(this.pos_profile),
 						price_list: this.customer_price_list,
 						item_group: this.item_group !== "ALL" ? this.item_group.toLowerCase() : "",
-						search_value: this.search || "",
+						search_value: searchTerm || "",
 						customer: this.customer,
 						modified_after: lastSync,
 						limit,
@@ -1760,10 +1769,11 @@ export default {
 				return;
 			}
 			const qty = this.get_item_qty(this.first_search);
+			const searchTerm = this.get_search(this.first_search).trim();
 			const new_item = { ...this.filtered_items[0] };
 			new_item.qty = flt(qty);
 			new_item.item_barcode.forEach((element) => {
-				if (this.search == element.barcode) {
+				if (searchTerm === element.barcode) {
 					new_item.uom = element.posa_uom;
 					match = true;
 				}
@@ -1774,7 +1784,7 @@ export default {
 				this.pos_profile.posa_search_serial_no
 			) {
 				new_item.serial_no_data.forEach((element) => {
-					if (this.search && element.serial_no == this.search) {
+					if (searchTerm && element.serial_no == searchTerm) {
 						new_item.to_set_serial_no = this.first_search;
 						match = true;
 					}
@@ -1785,7 +1795,7 @@ export default {
 			}
 			if (!new_item.to_set_batch_no && new_item.has_batch_no && this.pos_profile.posa_search_batch_no) {
 				new_item.batch_no_data.forEach((element) => {
-					if (this.search && element.batch_no == this.search) {
+					if (searchTerm && element.batch_no == searchTerm) {
 						new_item.to_set_batch_no = this.first_search;
 						new_item.batch_no = this.first_search;
 						match = true;
@@ -1810,10 +1820,9 @@ export default {
 
 			// Determine the actual query string and trim whitespace
 			const query = typeof newSearchTerm === "string" ? newSearchTerm : vm.first_search;
+			const searchTerm = (query || "").trim();
 
-			vm.search = (query || "").trim();
-
-			if (!vm.search) {
+			if (!searchTerm) {
 				vm.search_from_scanner = false;
 				return;
 			}
@@ -1822,7 +1831,7 @@ export default {
 
 			if (vm.pos_profile && vm.pos_profile.pose_use_limit_search) {
 				// Only trigger search when query length meets minimum threshold
-				if (vm.search && vm.search.length >= 3) {
+				if (searchTerm.length >= 3) {
 					if (vm.pos_profile && !vm.pos_profile.posa_local_storage) {
 						vm.get_items(true);
 					} else {
@@ -1831,13 +1840,13 @@ export default {
 				}
 			} else if (vm.pos_profile && vm.pos_profile.posa_local_storage) {
 				await vm.loadVisibleItems(true);
-				if (vm.search && vm.search.length >= 3) {
+				if (searchTerm.length >= 3) {
 					vm.enter_event();
 				}
 			} else {
 				// Save the current filtered items before search to maintain quantity data
 				const current_items = [...vm.filtered_items];
-				if (vm.search && vm.search.length >= 3) {
+				if (searchTerm.length >= 3) {
 					vm.enter_event();
 				}
 
@@ -1890,7 +1899,6 @@ export default {
 			return search_term;
 		},
 		esc_event() {
-			this.search = null;
 			this.first_search = null;
 			this.search_backup = null;
 			this.qty = 1;
@@ -2219,7 +2227,6 @@ export default {
 			this.search_from_scanner = true;
 			// apply scanned code as search term
 			this.first_search = sCode;
-			this.search = sCode;
 
 			this.$nextTick(() => {
 				if (this.filtered_items.length == 0) {
@@ -2262,20 +2269,17 @@ export default {
 		clearSearch() {
 			this.search_backup = this.first_search;
 			this.first_search = "";
-			this.search = "";
 			// No need to call get_items() again
 		},
 
 		restoreSearch() {
 			if (this.first_search === "") {
 				this.first_search = this.search_backup;
-				this.search = this.search_backup;
 				// No need to reload items when focus is lost
 			}
 		},
 		handleItemSearchFocus() {
 			this.first_search = "";
-			this.search = "";
 			// Optionally, you might want to also clear search_backup if the behaviour should be a full reset on focus
 			// this.search_backup = "";
 		},
@@ -2296,12 +2300,10 @@ export default {
 			this.search_from_scanner = true;
 
 			// Clear any previous search
-			this.search = "";
 			this.first_search = "";
 
 			// Set the scanned code as search term
 			this.first_search = scannedCode;
-			this.search = scannedCode;
 
 			// Show scanning feedback
 			frappe.show_alert(
@@ -2625,10 +2627,10 @@ export default {
 			return this.isDarkTheme ? { style: "background-color:#121212;color:#fff" } : {};
 		},
 		filtered_items() {
-			this.search = this.get_search(this.first_search).trim();
+			const searchTerm = this.get_search(this.first_search).trim();
 
 			// Use memoized search for better performance
-			let filteredItems = this.memoizedSearch(this.search, this.item_group);
+			let filteredItems = this.memoizedSearch(searchTerm, this.item_group);
 
 			if (!this.pos_profile || !this.pos_profile.pose_use_limit_search) {
 				// Apply additional filters
