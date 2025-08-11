@@ -263,16 +263,16 @@ export default {
 .loading-container {
 	position: absolute;
 	bottom: 0;
-	left: 0;
-	right: 0;
+        inset-inline-start: 0;
+        inset-inline-end: 0;
 	z-index: 1000;
 }
 
 .glass-card {
 	position: absolute;
 	top: -40px;
-	left: 12px;
-	right: 12px;
+        inset-inline-start: 12px;
+        inset-inline-end: 12px;
 	display: flex;
 	justify-content: space-between;
 	align-items: center;

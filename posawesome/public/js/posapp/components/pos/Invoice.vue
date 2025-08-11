@@ -1218,9 +1218,9 @@ export default {
 /* Style for balance value text */
 :deep(.balance-value) {
 	font-size: 1.5rem;
-	font-weight: bold;
+		font-weight: bold;
 	color: var(--primary-start);
-   margin-inline-start: var(--dynamic-xs);
+	margin-inline-start: var(--dynamic-xs);
 }
 
 /* Red border and label for return mode card */
@@ -1237,7 +1237,7 @@ export default {
 	content: "RETURN";
 	position: absolute;
 	top: 0;
-	right: 0;
+        inset-inline-end: 0;
 	background-color: rgb(var(--v-theme-error));
 	color: white;
 	padding: 4px 12px;
@@ -1290,7 +1290,7 @@ export default {
 	border-radius: 8px 8px 0 0;
 	position: absolute;
 	top: 0;
-	right: 0;
+        inset-inline-end: 0;
 	transform: translateY(-100%);
 }
 

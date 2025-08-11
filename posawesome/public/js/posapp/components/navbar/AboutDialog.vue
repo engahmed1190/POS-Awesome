@@ -157,8 +157,8 @@ export default {
 	content: "";
 	position: absolute;
 	top: 0;
-	left: 0;
-	right: 0;
+        inset-inline-start: 0;
+        inset-inline-end: 0;
 	height: 3px;
 	background: linear-gradient(90deg, #1976d2 0%, #42a5f5 100%);
 }
@@ -167,7 +167,7 @@ export default {
 	display: flex;
 	align-items: center;
 	gap: 16px;
-	padding-right: 60px;
+        padding-inline-end: 60px;
 	/* Space for close button */
 }
 
@@ -351,7 +351,7 @@ export default {
 
 	.header-content-improved {
 		gap: 12px;
-		padding-right: 50px;
+                padding-inline-end: 50px;
 	}
 
 	.content-container-improved {

@@ -183,12 +183,12 @@ export default {
 	margin-bottom: 4px;
 }
 .cache-bar-bg {
-        width: 80px;
-        height: 8px;
-        background: #e3f2fd;
-        border-radius: 4px;
-        overflow: hidden;
-        margin-inline-end: 6px;
+	width: 80px;
+	height: 8px;
+	background: #e3f2fd;
+	border-radius: 4px;
+	overflow: hidden;
+	margin-inline-end: 6px;
 }
 .cache-bar-fill {
 	height: 100%;

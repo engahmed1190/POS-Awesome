@@ -500,8 +500,8 @@ export default {
 	content: "";
 	position: absolute;
 	top: 0;
-	left: 0;
-	right: 0;
+        inset-inline-start: 0;
+        inset-inline-end: 0;
 	bottom: 0;
 	background: transparent;
 	transition: all 0.3s ease;
@@ -658,9 +658,9 @@ export default {
 		padding: 10px 14px 8px;
 	}
 
-        .menu-btn-compact {
-                margin-inline-start: 6px;
-                padding: 5px 14px;
+	.menu-btn-compact {
+		margin-inline-start: 6px;
+		padding: 5px 14px;
 		min-width: 85px;
 		height: 34px;
 		font-size: 12px;

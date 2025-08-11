@@ -172,6 +172,6 @@ export default {
 
 /* Increase right padding to accommodate both icons */
 .posting-date-input :deep(.dp__input) {
-	padding-right: calc(30px + var(--dp-input-icon-padding));
+        padding-inline-end: calc(30px + var(--dp-input-icon-padding));
 }
 </style>

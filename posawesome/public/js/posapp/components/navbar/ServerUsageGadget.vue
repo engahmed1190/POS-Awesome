@@ -270,12 +270,12 @@ const peakPercent = computed(() => Math.round(Math.min(peakLag.value, 100)));
 	margin-bottom: 4px;
 }
 .cpu-bar-bg {
-        width: 80px;
-        height: 8px;
-        background: #e3f2fd;
-        border-radius: 4px;
-        overflow: hidden;
-        margin-inline-end: 6px;
+	width: 80px;
+	height: 8px;
+	background: #e3f2fd;
+	border-radius: 4px;
+	overflow: hidden;
+	margin-inline-end: 6px;
 }
 .cpu-bar-fill {
 	height: 100%;
@@ -342,11 +342,11 @@ const peakPercent = computed(() => Math.round(Math.min(peakLag.value, 100)));
 	gap: 12px;
 }
 .legend-dot {
-        display: inline-block;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        margin-inline-end: 4px;
+	display: inline-block;
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	margin-inline-end: 4px;
 }
 .legend-dot.client {
 	background: #4caf50;
