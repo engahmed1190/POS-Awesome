@@ -1,3 +1,4 @@
+/* global frappe, $ */
 import { createVuetify } from "vuetify";
 import { createApp } from "vue";
 import Dexie from "dexie/dist/dexie.mjs";
@@ -24,11 +25,13 @@ frappe.PosApp.posapp = class {
 	}
 	make_body() {
 		this.$el = this.$parent.find(".main-section");
+		const dir = frappe.utils.is_rtl() ? "rtl" : "ltr";
+		document.documentElement.dir = dir;
 		const vuetify = createVuetify({
 			components,
 			directives,
 			locale: {
-				rtl: frappe.utils.is_rtl(),
+				rtl: dir === "rtl",
 			},
 			theme: {
 				defaultTheme: "light",
