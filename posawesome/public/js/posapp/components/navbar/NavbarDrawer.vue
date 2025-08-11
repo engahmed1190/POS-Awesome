@@ -7,7 +7,7 @@
 		:class="['drawer-custom', { 'drawer-visible': drawerOpen }]"
 		@mouseleave="handleMouseLeave"
 		temporary
-		:location="isRtl ? 'right' : 'left'"
+		location="left"
 		:scrim="scrimColor"
 	>
 		<div v-if="!mini" class="drawer-header">
@@ -65,9 +65,6 @@ export default {
 		};
 	},
 	computed: {
-		isRtl() {
-			return frappe.utils.is_rtl();
-		},
 		scrimColor() {
 			// Use an opaque background in light mode so that
 			// underlying content doesn't show through the drawer
@@ -178,7 +175,7 @@ export default {
 /* Styling for the actively selected list item in the navigation drawer */
 .active-item {
 	background-color: rgba(25, 118, 210, 0.12) !important;
-	border-inline-start: 3px solid #1976d2;
+	border-right: 3px solid #1976d2;
 }
 
 /* Dark Theme Adjustments */
@@ -226,7 +223,7 @@ export default {
 :deep([data-theme="dark"]) .active-item,
 :deep(.v-theme--dark) .active-item {
 	background-color: rgba(144, 202, 249, 0.12) !important;
-	border-inline-start: 3px solid #90caf9;
+	border-right: 3px solid #90caf9;
 }
 
 :deep([data-theme="dark"]) .v-divider,

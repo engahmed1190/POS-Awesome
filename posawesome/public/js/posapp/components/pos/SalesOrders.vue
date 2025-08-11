@@ -21,14 +21,14 @@
                                                                 clearable
                                                                 class="mx-4"
                                                         ></v-text-field>
-							<v-btn
-								variant="text"
-								class="ms-2"
-								color="primary"
-								theme="dark"
-								@click="search_orders"
-								>{{ __("Search") }}</v-btn
-							>
+                                                        <v-btn
+                                                                variant="text"
+                                                                class="ms-2"
+                                                                color="primary"
+                                                                theme="dark"
+                                                                @click="search_orders"
+                                                                >{{ __("Search") }}</v-btn
+                                                        >
 						</v-row>
 						<v-row no-gutters>
 							<v-col cols="12" class="pa-1">

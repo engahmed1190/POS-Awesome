@@ -178,28 +178,28 @@
 .corner.top-left {
         top: 0;
         inset-inline-start: 0;
-        border-right: none;
+        border-inline-end: none;
         border-bottom: none;
 }
 
 .corner.top-right {
         top: 0;
         inset-inline-end: 0;
-        border-left: none;
+        border-inline-start: none;
         border-bottom: none;
 }
 
 .corner.bottom-left {
         bottom: 0;
         inset-inline-start: 0;
-        border-right: none;
+        border-inline-end: none;
         border-top: none;
 }
 
 .corner.bottom-right {
         bottom: 0;
         inset-inline-end: 0;
-        border-left: none;
+        border-inline-start: none;
         border-top: none;
 }
 
