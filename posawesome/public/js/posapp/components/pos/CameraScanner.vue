@@ -2,9 +2,9 @@
 	<v-dialog v-model="scannerDialog" max-width="600px" persistent="false">
 		<v-card>
 			<v-card-title class="text-h5 text-primary d-flex align-center">
-				<v-icon class="mr-2" size="large">mdi-camera</v-icon>
+                                <v-icon class="me-2" size="large">mdi-camera</v-icon>
 				{{ __("Scan QR Code/Barcode") }}
-				<v-chip class="ml-2" size="small" color="primary">
+                                <v-chip class="ms-2" size="small" color="primary">
 					{{ scanType === "Both" ? "Auto Detect" : scanType }}
 				</v-chip>
 				<v-spacer></v-spacer>
@@ -131,23 +131,23 @@
 }
 
 .scanning-overlay {
-	position: absolute;
-	top: 0;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	pointer-events: none;
-	z-index: 10;
+        position: absolute;
+        top: 0;
+        inset-inline-start: 0;
+        inset-inline-end: 0;
+        bottom: 0;
+        pointer-events: none;
+        z-index: 10;
 }
 
 .scan-line {
-	position: absolute;
-	top: 50%;
-	left: 10%;
-	right: 10%;
-	height: 2px;
-	background: linear-gradient(90deg, transparent, #4caf50, transparent);
-	animation: scan 2s linear infinite;
+        position: absolute;
+        top: 50%;
+        inset-inline-start: 10%;
+        inset-inline-end: 10%;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #4caf50, transparent);
+        animation: scan 2s linear infinite;
 }
 
 @keyframes scan {
@@ -161,11 +161,11 @@
 }
 
 .scan-corners {
-	position: absolute;
-	top: 20%;
-	left: 20%;
-	right: 20%;
-	bottom: 20%;
+        position: absolute;
+        top: 20%;
+        inset-inline-start: 20%;
+        inset-inline-end: 20%;
+        bottom: 20%;
 }
 
 .corner {
@@ -176,31 +176,31 @@
 }
 
 .corner.top-left {
-	top: 0;
-	left: 0;
-	border-right: none;
-	border-bottom: none;
+        top: 0;
+        inset-inline-start: 0;
+        border-inline-end: none;
+        border-bottom: none;
 }
 
 .corner.top-right {
-	top: 0;
-	right: 0;
-	border-left: none;
-	border-bottom: none;
+        top: 0;
+        inset-inline-end: 0;
+        border-inline-start: none;
+        border-bottom: none;
 }
 
 .corner.bottom-left {
-	bottom: 0;
-	left: 0;
-	border-right: none;
-	border-top: none;
+        bottom: 0;
+        inset-inline-start: 0;
+        border-inline-end: none;
+        border-top: none;
 }
 
 .corner.bottom-right {
-	bottom: 0;
-	right: 0;
-	border-left: none;
-	border-top: none;
+        bottom: 0;
+        inset-inline-end: 0;
+        border-inline-start: none;
+        border-top: none;
 }
 
 .status-messages {

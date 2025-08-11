@@ -210,7 +210,11 @@
 						<v-list-item v-bind="props">
 							<template #prepend>
 								<v-icon :color="item.raw.code === currentLanguage ? 'primary' : 'grey'">
-									{{ item.raw.code === currentLanguage ? 'mdi-check-circle' : 'mdi-circle-outline' }}
+									{{
+										item.raw.code === currentLanguage
+											? "mdi-check-circle"
+											: "mdi-circle-outline"
+									}}
 								</v-icon>
 							</template>
 							<v-list-item-title>
@@ -230,19 +234,14 @@
 					density="compact"
 					class="mt-3"
 				>
-					{{ __("Language will be changed to") }}: 
+					{{ __("Language will be changed to") }}:
 					<strong>{{ selectedLanguageName }}</strong>
 				</v-alert>
 			</v-card-text>
 
 			<v-card-actions class="pa-4 pt-0">
 				<v-spacer />
-				<v-btn
-					color="grey"
-					variant="text"
-					@click="closeLanguageDialog"
-					:disabled="changing"
-				>
+				<v-btn color="grey" variant="text" @click="closeLanguageDialog" :disabled="changing">
 					{{ __("Cancel") }}
 				</v-btn>
 				<v-btn
@@ -309,20 +308,17 @@ export default {
 		};
 	},
 
-        computed: {
-                isRtl() {
-                        return document.documentElement.dir === 'rtl';
-                },
-                canChangeLanguage() {
-                        return this.selectedLanguage !== this.currentLanguage && !this.changing;
-                },
-                selectedLanguageName() {
-                        const lang = this.availableLanguages.find(l => l.code === this.selectedLanguage);
-                        return lang?.name || this.selectedLanguage.toUpperCase();
-                },
-        },
+	computed: {
+		canChangeLanguage() {
+			return this.selectedLanguage !== this.currentLanguage && !this.changing;
+		},
+		selectedLanguageName() {
+			const lang = this.availableLanguages.find((l) => l.code === this.selectedLanguage);
+			return lang?.name || this.selectedLanguage.toUpperCase();
+		},
+	},
+	async mounted() {
 
-        async mounted() {
 		await this.initializeLanguage();
 	},
 	methods: {
@@ -335,24 +331,33 @@ export default {
 			this.changing = true;
 			try {
 				const response = await frappe.call({
-					method: 'posawesome.posawesome.api.utilities.set_current_user_language',
-					args: { lang_code: this.selectedLanguage }
+					method: "posawesome.posawesome.api.utilities.set_current_user_language",
+					args: { lang_code: this.selectedLanguage },
 				});
 
 				const result = response?.message || response;
-				
+
 				if (result?.success) {
 					this.currentLanguage = this.selectedLanguage;
-					
+
 					if (window.frappe && window.frappe.boot) {
 						window.frappe.boot.lang = this.selectedLanguage;
 					}
-					
+
+					if (window.frappe?.utils) {
+						const dir = frappe.utils.is_rtl() ? "rtl" : "ltr";
+						localStorage.setItem("lang_dir", dir);
+						document.documentElement.dir = dir;
+						if (this.$vuetify?.locale?.isRtl) {
+							this.$vuetify.locale.isRtl.value = dir === "rtl";
+						}
+					}
+
 					this.showNotification("Language changed successfully! Reloading...", "success");
 					this.closeLanguageDialog();
-					
-					this.$emit('clear-cache');
-					
+
+					this.$emit("clear-cache");
+
 					setTimeout(() => {
 						window.location.reload();
 					}, 2000);
@@ -361,7 +366,10 @@ export default {
 					this.showNotification(errorMsg, "error");
 				}
 			} catch (error) {
-				this.showNotification(`Failed to change language: ${error.message || 'Unknown error'}`, "error");
+				this.showNotification(
+					`Failed to change language: ${error.message || "Unknown error"}`,
+					"error",
+				);
 			} finally {
 				this.changing = false;
 			}
@@ -371,11 +379,11 @@ export default {
 			this.loading = true;
 			try {
 				const response = await frappe.call({
-					method: 'posawesome.posawesome.api.utilities.get_current_user_language'
+					method: "posawesome.posawesome.api.utilities.get_current_user_language",
 				});
-				
+
 				const result = response?.message || response;
-				
+
 				if (result?.success) {
 					Object.assign(this, {
 						availableLanguages: result.available_languages,
@@ -414,7 +422,7 @@ export default {
 	},
 	emits: [
 		"close-shift",
-		"print-last-invoice", 
+		"print-last-invoice",
 		"sync-invoices",
 		"toggle-offline",
 		"clear-cache",
@@ -507,8 +515,8 @@ export default {
 	content: "";
 	position: absolute;
 	top: 0;
-	left: 0;
-	right: 0;
+        inset-inline-start: 0;
+        inset-inline-end: 0;
 	bottom: 0;
 	background: transparent;
 	transition: all 0.3s ease;
@@ -665,7 +673,9 @@ export default {
 		padding: 10px 14px 8px;
 	}
 
-        .menu-btn-compact {
+
+	.menu-btn-compact {
+
                 margin-inline-start: 6px;
 		padding: 5px 14px;
 		min-width: 85px;

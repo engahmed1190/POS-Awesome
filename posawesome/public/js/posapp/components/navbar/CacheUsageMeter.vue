@@ -188,7 +188,7 @@ export default {
 	background: #e3f2fd;
 	border-radius: 4px;
 	overflow: hidden;
-	margin-right: 6px;
+        margin-inline-end: 6px;
 }
 .cache-bar-fill {
 	height: 100%;
