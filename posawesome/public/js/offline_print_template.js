@@ -6,8 +6,8 @@ export default function generateOfflineInvoiceHTML(invoice) {
 			const sn = it.serial_no ? `<br><b>SR.No:</b><br>${it.serial_no.replace(/\n/g, ", ")}` : "";
 			return `<tr>
         <td>${it.item_code}${it.item_name && it.item_name !== it.item_code ? `<br>${it.item_name}` : ""}${sn}</td>
-        <td style="text-align:right">${it.qty} ${it.uom || ""}<br>@ ${it.rate}</td>
-        <td style="text-align:right">${it.amount}</td>
+        <td style="text-align:end">${it.qty} ${it.uom || ""}<br>@ ${it.rate}</td>
+        <td style="text-align:end">${it.amount}</td>
       </tr>`;
 		})
 		.join("");
@@ -15,23 +15,23 @@ export default function generateOfflineInvoiceHTML(invoice) {
 	const taxesRows = (invoice.taxes || [])
 		.map(
 			(row) => `<tr>
-      <td class="text-right" style="width:70%">${row.description}@${row.rate}%</td>
-      <td class="text-right">${row.tax_amount}</td>
+      <td class="text-end" style="width:70%">${row.description}@${row.rate}%</td>
+      <td class="text-end">${row.tax_amount}</td>
     </tr>`,
 		)
 		.join("");
 
 	const discountRow = invoice.discount_amount
 		? `<tr>
-      <td class="text-right" style="width:75%">Discount</td>
-      <td class="text-right">${invoice.discount_amount}</td>
+      <td class="text-end" style="width:75%">Discount</td>
+      <td class="text-end">${invoice.discount_amount}</td>
     </tr>`
 		: "";
 
 	const changeRow = invoice.change_amount
 		? `<tr>
-      <td class="text-right" style="width:75%">Change Amount</td>
-      <td class="text-right">${invoice.change_amount}</td>
+      <td class="text-end" style="width:75%">Change Amount</td>
+      <td class="text-end">${invoice.change_amount}</td>
     </tr>`
 		: "";
 
@@ -43,7 +43,7 @@ export default function generateOfflineInvoiceHTML(invoice) {
     <style>
       table, tr, td, div, p { line-height:120%; vertical-align:middle; font-size:10px; }
       .print-format { width:3.5in; padding:0.1in; min-height:7in; }
-      .text-right { text-align:right; }
+      .text-end { text-align:end; }
     </style>
   </head>
   <body class="print-format">
@@ -59,17 +59,17 @@ export default function generateOfflineInvoiceHTML(invoice) {
     <p style="margin-top:3px;"><b>Additional Note:</b> <strong>${invoice.posa_notes || ""}</strong></p>
     <table cellpadding="0" cellspacing="0" style="width:100%">
       <thead>
-        <tr><th width="50%"><b>Item</b></th><th width="25%" class="text-right"><b>Qty</b></th><th width="25%" class="text-right"><b>Amount</b></th></tr>
+        <tr><th width="50%"><b>Item</b></th><th width="25%" class="text-end"><b>Qty</b></th><th width="25%" class="text-end"><b>Amount</b></th></tr>
       </thead>
       <tbody>${itemsRows}</tbody>
     </table>
     <table cellpadding="0" cellspacing="0" style="width:100%">
       <tbody>
-        <tr><td class="text-right" style="width:70%"><b>Total</b></td><td class="text-right">${invoice.total}</td></tr>
+        <tr><td class="text-end" style="width:70%"><b>Total</b></td><td class="text-end">${invoice.total}</td></tr>
         ${taxesRows}
         ${discountRow}
-        <tr><td class="text-right" style="width:70%"><b>Grand Total</b></td><td class="text-right">${invoice.grand_total}</td></tr>
-        <tr><td class="text-right" style="width:75%"><b>Paid Amount</b></td><td class="text-right">${invoice.paid_amount}</td></tr>
+        <tr><td class="text-end" style="width:70%"><b>Grand Total</b></td><td class="text-end">${invoice.grand_total}</td></tr>
+        <tr><td class="text-end" style="width:75%"><b>Paid Amount</b></td><td class="text-end">${invoice.paid_amount}</td></tr>
         ${changeRow}
       </tbody>
     </table>

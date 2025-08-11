@@ -1220,7 +1220,7 @@ export default {
 	font-size: 1.5rem;
 	font-weight: bold;
 	color: var(--primary-start);
-	margin-left: var(--dynamic-xs);
+   margin-inline-start: var(--dynamic-xs);
 }
 
 /* Red border and label for return mode card */

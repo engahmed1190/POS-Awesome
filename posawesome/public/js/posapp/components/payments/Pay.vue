@@ -171,7 +171,7 @@
 							</v-col>
 						</v-row>
 						<v-row align="center" no-gutters class="mb-1">
-							<v-col md="4" cols="12" class="mr-1">
+							<v-col md="4" cols="12" class="me-1">
 								<v-text-field
 									density="compact"
 									variant="outlined"
@@ -184,7 +184,7 @@
 									clearable
 								></v-text-field>
 							</v-col>
-							<v-col md="4" cols="12" class="mr-1">
+							<v-col md="4" cols="12" class="me-1">
 								<v-text-field
 									density="compact"
 									variant="outlined"
@@ -310,7 +310,7 @@
 								</v-col>
 								<v-col md="5">
 									<div class="d-flex align-center">
-										<div class="mr-1 text-primary">
+										<div class="me-1 text-primary">
 											{{ currencySymbol(pos_profile.currency) }}
 										</div>
 										<v-text-field
@@ -1252,23 +1252,23 @@ export default {
 }
 
 input[total_of_diff] {
-	text-align: right;
+        text-align: end;
 }
 
 input[payments_methods] {
-	text-align: right;
+        text-align: end;
 }
 
 input[total_selected_payments] {
-	text-align: right;
+        text-align: end;
 }
 
 input[total_selected_invoices] {
-	text-align: right;
+        text-align: end;
 }
 
 input[total_selected_mpesa_payments] {
-	text-align: right;
+        text-align: end;
 }
 
 .selected-row {

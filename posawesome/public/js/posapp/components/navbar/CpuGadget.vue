@@ -10,7 +10,7 @@
 			<div class="cpu-tooltip-content">
 				<div class="cpu-tooltip-title">{{ __("CPU Load") }}</div>
 				<div class="cpu-tooltip-peak mb-1">
-					<v-icon size="14" color="success" class="mr-1">mdi-arrow-up-bold</v-icon>
+					<v-icon size="14" color="success" class="me-1">mdi-arrow-up-bold</v-icon>
 					{{ __("Peak:") }}
 					<b>{{ peakLag.toFixed(1) }} ms</b>
 					({{ peakPercent }}%)
@@ -36,7 +36,7 @@
 					{{ __("Current Event Loop Lag:") }} <b>{{ cpuLag.toFixed(1) }}</b> ms
 				</div>
 				<div v-if="cpuLag >= 80" class="cpu-tooltip-warning">
-					<v-icon size="14" color="error" class="mr-1">mdi-alert</v-icon>
+					<v-icon size="14" color="error" class="me-1">mdi-alert</v-icon>
 					{{ __("Warning: High lag may indicate heavy processing or browser slowness.") }}
 				</div>
 				<div v-if="serverLoading" class="cpu-tooltip-detail">
@@ -47,14 +47,14 @@
 					<div class="cpu-tooltip-detail">
 						{{ __("Server CPU Usage:") }}
 						<b>{{ serverCpu !== null ? serverCpu.toFixed(1) + "%" : "N/A" }}</b>
-						<span class="ml-2"
+						<span class="ms-2"
 							>{{ __("Peak Server:") }} <b>{{ serverPeak.toFixed(1) }}%</b></span
 						>
 					</div>
 					<div class="cpu-tooltip-detail">
 						{{ __("Server Memory Usage:") }}
 						<b>{{ serverMemory !== null ? serverMemory.toFixed(1) + "%" : "N/A" }}</b>
-						<span class="ml-2"
+						<span class="ms-2"
 							>{{ __("Peak Memory:") }} <b>{{ serverMemoryPeak.toFixed(1) }}%</b></span
 						>
 					</div>
@@ -74,10 +74,10 @@
 					</div>
 					<div class="cpu-tooltip-detail">
 						{{ __("Total:") }} <b>{{ formatBytes(memoryTotal) }}</b>
-						<span class="ml-2"
+						<span class="ms-2"
 							>{{ __("Used:") }} <b>{{ formatBytes(memoryUsed) }}</b></span
 						>
-						<span class="ml-2"
+						<span class="ms-2"
 							>{{ __("Available:") }} <b>{{ formatBytes(memoryAvailable) }}</b></span
 						>
 					</div>
@@ -86,15 +86,15 @@
 					</div>
 				</div>
 				<div class="cpu-tooltip-tip mt-2">
-					<v-icon size="14" color="primary" class="mr-1">mdi-lightbulb-on-outline</v-icon>
+					<v-icon size="14" color="primary" class="me-1">mdi-lightbulb-on-outline</v-icon>
 					{{ __("Tip: Close unused tabs or apps to reduce lag.") }}
 				</div>
 				<div class="cpu-tooltip-explanation mt-2">
-					<v-icon size="14" color="info" class="mr-1">mdi-chip</v-icon>
+					<v-icon size="14" color="info" class="me-1">mdi-chip</v-icon>
 					{{ __("Event-loop lag measures how busy your browser is. Lower is better.") }}
 				</div>
 				<div class="cpu-tooltip-action mt-2">
-					<v-icon size="14" class="mr-1">mdi-refresh</v-icon>
+					<v-icon size="14" class="me-1">mdi-refresh</v-icon>
 					{{ __("Updates automatically") }}
 				</div>
 			</div>
@@ -242,12 +242,12 @@ const peakPercent = computed(() => Math.round(Math.min(peakLag.value, 100)));
 	margin-bottom: 4px;
 }
 .cpu-bar-bg {
-	width: 80px;
-	height: 8px;
-	background: #e3f2fd;
-	border-radius: 4px;
-	overflow: hidden;
-	margin-right: 6px;
+        width: 80px;
+        height: 8px;
+        background: #e3f2fd;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-inline-end: 6px;
 }
 .cpu-bar-fill {
 	height: 100%;
@@ -290,11 +290,11 @@ const peakPercent = computed(() => Math.round(Math.min(peakLag.value, 100)));
 	background: none;
 }
 .cpu-current-lag {
-	font-size: 13px;
-	font-weight: 600;
-	color: #4caf50;
-	min-width: 48px;
-	text-align: right;
+        font-size: 13px;
+        font-weight: 600;
+        color: #4caf50;
+        min-width: 48px;
+        text-align: end;
 }
 .cpu-tooltip-sparkline {
 	width: 180px;
@@ -314,11 +314,11 @@ const peakPercent = computed(() => Math.round(Math.min(peakLag.value, 100)));
 	gap: 12px;
 }
 .legend-dot {
-	display: inline-block;
-	width: 10px;
-	height: 10px;
-	border-radius: 50%;
-	margin-right: 4px;
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-inline-end: 4px;
 }
 .legend-dot.client {
 	background: #4caf50;

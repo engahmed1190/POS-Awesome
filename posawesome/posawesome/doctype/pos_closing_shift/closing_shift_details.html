@@ -12,16 +12,16 @@
 								</thead>
 								<tbody>
 									<tr>
-										<td class="text-left font-bold">{{ _('Grand Total') }}</td>
-										<td class='text-right'> {{ frappe.utils.fmt_money(data.grand_total or '', currency=currency) }}</td>
+                                                                                <td class="text-start font-bold">{{ _('Grand Total') }}</td>
+                                                                                <td class='text-end'> {{ frappe.utils.fmt_money(data.grand_total or '', currency=currency) }}</td>
 									</tr>
 									<tr>
-										<td class="text-left font-bold">{{ _('Net Total') }}</td>
-										<td class='text-right'> {{ frappe.utils.fmt_money(data.net_total or '', currency=currency) }}</td>
+                                                                                <td class="text-start font-bold">{{ _('Net Total') }}</td>
+                                                                                <td class='text-end'> {{ frappe.utils.fmt_money(data.net_total or '', currency=currency) }}</td>
 									</tr>
 									<tr>
-										<td class="text-left font-bold">{{ _('Total Quantity') }}</td>
-										<td class='text-right'>{{ data.total_quantity or '' }}</td>
+                                                                                <td class="text-start font-bold">{{ _('Total Quantity') }}</td>
+                                                                                <td class='text-end'>{{ data.total_quantity or '' }}</td>
 									</tr>
 
 							</tbody>
@@ -37,15 +37,15 @@
 							<table class="table table-bordered table-hover">
 								<thead>
 									<tr>
-										<th class="text-left">{{ _("Mode of Payment") }}</th>
-										<th class="text-right">{{ _("Amount") }}</th>
+                                                                                <th class="text-start">{{ _("Mode of Payment") }}</th>
+                                                                                <th class="text-end">{{ _("Amount") }}</th>
 									</tr>
 								</thead>
 								<tbody>
 								{% for d in data.payment_reconciliation %}
 									<tr>
-										<td class="text-left">{{ d.mode_of_payment }}</td>
-										<td class='text-right'> {{ frappe.utils.fmt_money(d.expected_amount - d.opening_amount, currency=currency) }}</td>
+                                                                                <td class="text-start">{{ d.mode_of_payment }}</td>
+                                                                                <td class='text-end'> {{ frappe.utils.fmt_money(d.expected_amount - d.opening_amount, currency=currency) }}</td>
 									</tr>
 								{% endfor %}
 							</tbody>
@@ -62,17 +62,17 @@
 							<table class="table table-bordered table-hover">
 								<thead>
 									<tr>
-										<th class="text-left">{{ _("Account") }}</th>
-										<th class="text-left">{{ _("Rate") }}</th>
-										<th class="text-right">{{ _("Amount") }}</th>
+                                                                                <th class="text-start">{{ _("Account") }}</th>
+                                                                                <th class="text-start">{{ _("Rate") }}</th>
+                                                                                <th class="text-end">{{ _("Amount") }}</th>
 									</tr>
 								</thead>
 								<tbody>
 								{% for d in data.taxes %}
 									<tr>
-										<td class="text-left">{{ d.account_head }}</td>
-										<td class="text-left">{{ d.rate }} %</td>
-										<td class='text-right'> {{ frappe.utils.fmt_money(d.amount, currency=currency) }}</td>
+                                                                                <td class="text-start">{{ d.account_head }}</td>
+                                                                                <td class="text-start">{{ d.rate }} %</td>
+                                                                                <td class='text-end'> {{ frappe.utils.fmt_money(d.amount, currency=currency) }}</td>
 									</tr>
 								{% endfor %}
 							</tbody>

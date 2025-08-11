@@ -17,7 +17,7 @@
 									color="primary"
 									variant="flat"
 									size="small"
-									class="status-chip mr-2"
+									class="status-chip me-2"
 								>
 									<v-icon start size="14">mdi-clock-outline</v-icon>
 									{{ invoices.length }} {{ __("Pending") }}
@@ -76,7 +76,7 @@
 							>
 								<template #item.customer="{ item }">
 									<div class="customer-cell">
-										<v-avatar size="32" color="primary" class="mr-3">
+										<v-avatar size="32" color="primary" class="me-3">
 											<v-icon size="18" color="white">mdi-account</v-icon>
 										</v-avatar>
 										<div>
@@ -96,7 +96,7 @@
 								</template>
 
 								<template #item.grand_total="{ item }">
-									<div class="amount-cell text-right">
+									<div class="amount-cell text-end">
 										<div class="text-h6 font-weight-bold text-success">
 											{{ currencySymbol(item.invoice.currency) }}
 											{{

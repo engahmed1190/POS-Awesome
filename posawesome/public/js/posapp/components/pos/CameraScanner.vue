@@ -2,9 +2,9 @@
 	<v-dialog v-model="scannerDialog" max-width="600px" persistent="false">
 		<v-card>
 			<v-card-title class="text-h5 text-primary d-flex align-center">
-				<v-icon class="mr-2" size="large">mdi-camera</v-icon>
+				<v-icon class="me-2" size="large">mdi-camera</v-icon>
 				{{ __("Scan QR Code/Barcode") }}
-				<v-chip class="ml-2" size="small" color="primary">
+				<v-chip class="ms-2" size="small" color="primary">
 					{{ scanType === "Both" ? "Auto Detect" : scanType }}
 				</v-chip>
 				<v-spacer></v-spacer>

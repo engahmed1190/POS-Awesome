@@ -9,7 +9,7 @@
 			</template>
 			<div class="db-tooltip-content p-3 min-w-[220px]">
 				<div class="db-tooltip-title flex items-center font-semibold text-[14px] mb-2">
-					<v-icon size="16" color="info" class="mr-1">mdi-database-settings</v-icon>
+					<v-icon size="16" color="info" class="me-1">mdi-database-settings</v-icon>
 					{{ __("Database Health") }}
 				</div>
 				<v-divider class="my-2" />
@@ -28,45 +28,45 @@
 						</svg>
 					</div>
 					<div class="db-tooltip-detail flex items-center mb-1">
-						<v-icon size="14" color="info" class="mr-1">mdi-database-settings</v-icon>
+						<v-icon size="14" color="info" class="me-1">mdi-database-settings</v-icon>
 						<b>{{ dbStats.db_engine }}</b>
-						<span class="ml-2">{{ dbStats.db_version }}</span>
+						<span class="ms-2">{{ dbStats.db_version }}</span>
 					</div>
 					<v-divider class="my-2" />
 					<div class="db-tooltip-section-title mb-1">{{ __("Usage Stats") }}</div>
 					<div class="db-tooltip-detail flex items-center mb-1">
-						<v-icon size="14" color="info" class="mr-1">mdi-database</v-icon>
+						<v-icon size="14" color="info" class="me-1">mdi-database</v-icon>
 						{{ __("Size:") }} <b>{{ formattedDbSize }}</b>
-						<span class="ml-2 flex items-center"
-							><v-icon size="14" color="info" class="mr-1">mdi-table</v-icon
+						<span class="ms-2 flex items-center"
+							><v-icon size="14" color="info" class="me-1">mdi-table</v-icon
 							>{{ __("Tables:") }} <b>{{ dbStats.db_table_count }}</b></span
 						>
-						<span class="ml-2 flex items-center"
-							><v-icon size="14" color="info" class="mr-1">mdi-format-list-numbered</v-icon
+						<span class="ms-2 flex items-center"
+							><v-icon size="14" color="info" class="me-1">mdi-format-list-numbered</v-icon
 							>{{ __("Rows:") }} <b>{{ dbStats.db_total_rows }}</b></span
 						>
 					</div>
 					<div class="db-tooltip-detail flex items-center mb-1">
-						<v-icon size="14" color="info" class="mr-1">mdi-connection</v-icon>
+						<v-icon size="14" color="info" class="me-1">mdi-connection</v-icon>
 						{{ __("Connections:") }} <b>{{ dbStats.db_connections }}</b>
-						<span class="ml-2 flex items-center"
-							><v-icon size="14" color="warning" class="mr-1">mdi-timer-sand</v-icon
+						<span class="ms-2 flex items-center"
+							><v-icon size="14" color="warning" class="me-1">mdi-timer-sand</v-icon
 							>{{ __("Slow Queries:") }} <b>{{ dbStats.db_slow_queries }}</b></span
 						>
 					</div>
 					<v-divider class="my-2" />
 					<div v-if="dbStats.db_top_tables && dbStats.db_top_tables.length">
 						<div class="db-tooltip-section-title mb-1 flex items-center">
-							<v-icon size="14" color="info" class="mr-1">mdi-database-outline</v-icon>
+							<v-icon size="14" color="info" class="me-1">mdi-database-outline</v-icon>
 							{{ __("Top Tables") }}
 						</div>
-						<ul class="db-top-tables ml-2">
+						<ul class="db-top-tables ms-2">
 							<li
 								v-for="t in dbStats.db_top_tables"
 								:key="t.name"
 								class="flex items-center mb-1"
 							>
-								<v-icon size="12" color="info" class="mr-1">mdi-table</v-icon>
+								<v-icon size="12" color="info" class="me-1">mdi-table</v-icon>
 								<b>{{ t.name }}</b
 								>: {{ formatBytes(t.size) }}
 							</li>
@@ -75,11 +75,11 @@
 				</div>
 				<v-divider class="my-2" />
 				<div class="db-tooltip-tip mt-2 flex items-center">
-					<v-icon size="14" color="primary" class="mr-1">mdi-lightbulb-on-outline</v-icon>
+					<v-icon size="14" color="primary" class="me-1">mdi-lightbulb-on-outline</v-icon>
 					{{ __("Tip: Monitor slow queries and table size for optimal performance.") }}
 				</div>
 				<div class="db-tooltip-explanation mt-2 flex items-center">
-					<v-icon size="14" color="info" class="mr-1">mdi-database</v-icon>
+					<v-icon size="14" color="info" class="me-1">mdi-database</v-icon>
 					{{ __("Database health affects overall system speed and reliability.") }}
 				</div>
 			</div>
@@ -134,11 +134,11 @@ const sparklinePoints = computed(() => {
 	transform: scale(1.1);
 }
 .db-current-size {
-	font-size: 13px;
-	font-weight: 600;
-	color: #1976d2;
-	min-width: 48px;
-	text-align: right;
+        font-size: 13px;
+        font-weight: 600;
+        color: #1976d2;
+        min-width: 48px;
+        text-align: end;
 }
 .db-tooltip-content {
 	padding: 14px;
