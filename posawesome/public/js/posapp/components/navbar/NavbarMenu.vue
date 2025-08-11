@@ -1,9 +1,9 @@
 <template>
-	<v-menu :min-width="240" :close-on-content-click="true" location="bottom end" :offset="[0, 4]">
+        <v-menu :min-width="240" :close-on-content-click="true" :location="isRtl ? 'bottom start' : 'bottom end'" :offset="[0, 4]">
 		<template #activator="{ props }">
 			<v-btn v-bind="props" color="primary" variant="elevated" class="menu-btn-compact">
 				{{ __("Menu") }}
-				<v-icon end size="16" class="ml-1">mdi-menu-down</v-icon>
+                                <v-icon end size="16" class="ms-1">mdi-menu-down</v-icon>
 			</v-btn>
 		</template>
 		<v-card class="menu-card-compact" elevation="12">
@@ -186,7 +186,7 @@
 	<v-dialog v-model="showLanguageDialog" max-width="400" persistent>
 		<v-card>
 			<v-card-title class="text-h6 d-flex align-center">
-				<v-icon start color="primary" class="mr-2">mdi-translate</v-icon>
+                                <v-icon start color="primary" class="me-2">mdi-translate</v-icon>
 				{{ __("Select Language") }}
 			</v-card-title>
 
@@ -274,6 +274,7 @@
 </template>
 
 <script>
+/* global frappe */
 const FALLBACK_LANGUAGES = [
 	{ code: "en", name: "English", native_name: "English" },
 	{ code: "ar", name: "العربية", native_name: "العربية" },
@@ -307,16 +308,21 @@ export default {
 			},
 		};
 	},
-	computed: {
-		canChangeLanguage() {
-			return this.selectedLanguage !== this.currentLanguage && !this.changing;
-		},
-		selectedLanguageName() {
-			const lang = this.availableLanguages.find(l => l.code === this.selectedLanguage);
-			return lang?.name || this.selectedLanguage.toUpperCase();
-		},
-	},
-	async mounted() {
+
+        computed: {
+                isRtl() {
+                        return document.documentElement.dir === 'rtl';
+                },
+                canChangeLanguage() {
+                        return this.selectedLanguage !== this.currentLanguage && !this.changing;
+                },
+                selectedLanguageName() {
+                        const lang = this.availableLanguages.find(l => l.code === this.selectedLanguage);
+                        return lang?.name || this.selectedLanguage.toUpperCase();
+                },
+        },
+
+        async mounted() {
 		await this.initializeLanguage();
 	},
 	methods: {
@@ -421,9 +427,10 @@ export default {
 
 <style scoped>
 /* Compact Menu Button - Better Navbar Integration */
+
 .menu-btn-compact {
-	margin-left: 8px;
-	margin-right: 4px;
+        margin-inline-start: 8px;
+        margin-inline-end: 4px;
 	padding: 6px 16px;
 	border-radius: 20px;
 	font-weight: 600;
@@ -658,8 +665,8 @@ export default {
 		padding: 10px 14px 8px;
 	}
 
-	.menu-btn-compact {
-		margin-left: 6px;
+        .menu-btn-compact {
+                margin-inline-start: 6px;
 		padding: 5px 14px;
 		min-width: 85px;
 		height: 34px;
