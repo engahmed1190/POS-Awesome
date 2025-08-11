@@ -574,7 +574,7 @@ export default {
 	}
 
 	.action-btn-compact {
-		margin-left: 4px;
+            margin-inline-start: 4px;
 		padding: 6px 10px;
 		min-width: 60px;
 	}

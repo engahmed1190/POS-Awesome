@@ -3,7 +3,7 @@
 		<template #activator="{ props }">
 			<v-btn v-bind="props" color="primary" variant="elevated" class="menu-btn-compact">
 				{{ __("Menu") }}
-				<v-icon end size="16" class="ml-1">mdi-menu-down</v-icon>
+                                <v-icon end size="16" class="ms-1">mdi-menu-down</v-icon>
 			</v-btn>
 		</template>
 		<v-card class="menu-card-compact" elevation="12">
@@ -186,7 +186,7 @@
 	<v-dialog v-model="showLanguageDialog" max-width="400" persistent>
 		<v-card>
 			<v-card-title class="text-h6 d-flex align-center">
-				<v-icon start color="primary" class="mr-2">mdi-translate</v-icon>
+                                <v-icon start color="primary" class="me-2">mdi-translate</v-icon>
 				{{ __("Select Language") }}
 			</v-card-title>
 
@@ -422,8 +422,8 @@ export default {
 <style scoped>
 /* Compact Menu Button - Better Navbar Integration */
 .menu-btn-compact {
-	margin-left: 8px;
-	margin-right: 4px;
+        margin-inline-start: 8px;
+        margin-inline-end: 4px;
 	padding: 6px 16px;
 	border-radius: 20px;
 	font-weight: 600;
@@ -658,9 +658,9 @@ export default {
 		padding: 10px 14px 8px;
 	}
 
-	.menu-btn-compact {
-		margin-left: 6px;
-		padding: 5px 14px;
+        .menu-btn-compact {
+                margin-inline-start: 6px;
+                padding: 5px 14px;
 		min-width: 85px;
 		height: 34px;
 		font-size: 12px;

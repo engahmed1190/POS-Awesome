@@ -23,7 +23,7 @@
                                                         ></v-text-field>
 							<v-btn
 								variant="text"
-								class="ml-2"
+								class="ms-2"
 								color="primary"
 								theme="dark"
 								@click="search_orders"

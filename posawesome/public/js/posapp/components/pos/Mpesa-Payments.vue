@@ -27,7 +27,7 @@
                                                         clearable
                                                         class="mx-4"
                                                 ></v-text-field>
-						<v-btn variant="text" class="ml-2" color="primary" theme="dark" @click="search">{{
+						<v-btn variant="text" class="ms-2" color="primary" theme="dark" @click="search">{{
 							__("Search")
 						}}</v-btn>
 					</v-row>
