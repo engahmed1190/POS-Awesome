@@ -91,7 +91,7 @@
 .customer-input-wrapper {
 	width: 100%;
 	max-width: 100%;
-	padding-right: 1.5rem;
+        padding-inline-end: 1.5rem;
 	/* Elegant space at the right edge */
 	box-sizing: border-box;
 	display: flex;

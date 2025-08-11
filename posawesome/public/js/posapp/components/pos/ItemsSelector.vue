@@ -2165,7 +2165,7 @@ export default {
           <div class="item-option p-3 mb-2 border rounded cursor-pointer" data-item-index="${index}" style="border: 1px solid #ddd; cursor: pointer;">
             <div class="d-flex align-items-center">
               <img src="${item.image || "/assets/posawesome/js/posapp/components/pos/placeholder-image.png"}"
-                   style="width: 50px; height: 50px; object-fit: cover; margin-right: 15px;" />
+                   style="width: 50px; height: 50px; object-fit: cover; margin-inline-end: 15px;" />
               <div>
                 <div class="font-weight-bold">${item.item_name}</div>
                 <div class="text-muted small">${item.item_code}</div>

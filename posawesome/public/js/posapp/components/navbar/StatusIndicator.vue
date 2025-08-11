@@ -183,7 +183,7 @@ export default {
 	align-items: center;
 	gap: 8px;
 	/* Reduced gap */
-	margin-right: 8px;
+        margin-inline-end: 8px;
 	/* Reduced margin */
 }
 
@@ -236,7 +236,7 @@ export default {
 	}
 
 	.status-section-enhanced {
-		margin-right: 4px;
+                margin-inline-end: 4px;
 		/* Further reduced for mobile */
 	}
 }
