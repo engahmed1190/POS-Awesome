@@ -573,11 +573,11 @@ export default {
 		padding: 12px;
 	}
 
-	.action-btn-compact {
-		margin-left: 4px;
-		padding: 6px 10px;
-		min-width: 60px;
-	}
+        .action-btn-compact {
+                margin-inline-start: 4px;
+                padding: 6px 10px;
+                min-width: 60px;
+        }
 }
 
 /* Animation Effects */

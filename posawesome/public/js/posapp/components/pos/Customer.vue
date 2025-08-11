@@ -89,13 +89,13 @@
 
 <style scoped>
 .customer-input-wrapper {
-	width: 100%;
-	max-width: 100%;
-	padding-right: 1.5rem;
-	/* Elegant space at the right edge */
-	box-sizing: border-box;
-	display: flex;
-	flex-direction: column;
+        width: 100%;
+        max-width: 100%;
+        padding-inline-end: 1.5rem;
+        /* Elegant space at the right edge */
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
 }
 
 .customer-autocomplete {

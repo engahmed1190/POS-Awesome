@@ -29,7 +29,7 @@
 				class="flex-grow-1 sleek-field"
 				@update:model-value="onPriceListUpdate"
 			/>
-			<div v-if="pos_profile.posa_show_customer_balance" class="balance-field ml-3">
+                        <div v-if="pos_profile.posa_show_customer_balance" class="balance-field ms-3">
 				<strong>{{ __("Customer Balance") }}:</strong>
 				<span class="balance-value">{{ formatCurrency(customer_balance) }}</span>
 			</div>
@@ -172,6 +172,6 @@ export default {
 
 /* Increase right padding to accommodate both icons */
 .posting-date-input :deep(.dp__input) {
-	padding-right: calc(30px + var(--dp-input-icon-padding));
+        padding-inline-end: calc(30px + var(--dp-input-icon-padding));
 }
 </style>
