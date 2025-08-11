@@ -41,7 +41,7 @@ Description,الوصف
 Details,التفاصيل
 Difference,الفرق
 Disable,تعطيل
-Discount %,نسبة الخصم ٪
+Discount %,٪ نسبة الخصم 
 Discount Amount,قيمة الخصم
 Discount Percentage,نسبة الخصم
 Discount Type,نوع الخصم
@@ -68,7 +68,7 @@ Items,الأصناف
 Linked Invoices,الفواتير المرتبطة
 Loyalty Point,نقطة مكافأة
 Loyalty Point Scheme,برنامج نقاط المكافآت
-Loyalty Points,نقاط الولاء
+Loyalty Points,نقاط نقاط المكافآت 
 Max Amount,الحد الأقصى للمبلغ
 Max Discount Percentage Allowed ,الحد الأقصى المسموح به لنسبة الخصم
 Max Quantity,الحد الأقصى للكمية
