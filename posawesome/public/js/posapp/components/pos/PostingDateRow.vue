@@ -29,7 +29,7 @@
 				class="flex-grow-1 sleek-field"
 				@update:model-value="onPriceListUpdate"
 			/>
-			<div v-if="pos_profile.posa_show_customer_balance" class="balance-field ml-3">
+                        <div v-if="pos_profile.posa_show_customer_balance" class="balance-field ms-3">
 				<strong>{{ __("Customer Balance") }}:</strong>
 				<span class="balance-value">{{ formatCurrency(customer_balance) }}</span>
 			</div>
