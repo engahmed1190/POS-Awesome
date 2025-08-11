@@ -7,7 +7,7 @@
 		:class="['drawer-custom', { 'drawer-visible': drawerOpen }]"
 		@mouseleave="handleMouseLeave"
 		temporary
-		location="left"
+		:location="isRtl ? 'right' : 'left'"
 		:scrim="scrimColor"
 	>
 		<div v-if="!mini" class="drawer-header">
@@ -65,6 +65,9 @@ export default {
 		};
 	},
 	computed: {
+		isRtl() {
+			return frappe.utils.is_rtl();
+		},
 		scrimColor() {
 			// Use an opaque background in light mode so that
 			// underlying content doesn't show through the drawer
@@ -144,7 +147,7 @@ export default {
 
 /* Styling for the company name text within the drawer header */
 .drawer-company {
-        margin-inline-start: 12px;
+	margin-inline-start: 12px;
 	flex: 1;
 	font-weight: 500;
 	font-size: 1rem;
@@ -160,7 +163,7 @@ export default {
 
 /* Styling for the title text of navigation drawer list items */
 .drawer-item-title {
-        margin-inline-start: 8px;
+	margin-inline-start: 8px;
 	font-weight: 500;
 	font-size: 0.95rem;
 	color: #000000 !important;
@@ -175,7 +178,7 @@ export default {
 /* Styling for the actively selected list item in the navigation drawer */
 .active-item {
 	background-color: rgba(25, 118, 210, 0.12) !important;
-	border-right: 3px solid #1976d2;
+	border-inline-start: 3px solid #1976d2;
 }
 
 /* Dark Theme Adjustments */
@@ -223,7 +226,7 @@ export default {
 :deep([data-theme="dark"]) .active-item,
 :deep(.v-theme--dark) .active-item {
 	background-color: rgba(144, 202, 249, 0.12) !important;
-	border-right: 3px solid #90caf9;
+	border-inline-start: 3px solid #90caf9;
 }
 
 :deep([data-theme="dark"]) .v-divider,
