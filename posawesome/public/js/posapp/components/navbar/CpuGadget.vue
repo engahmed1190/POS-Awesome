@@ -247,7 +247,7 @@ const peakPercent = computed(() => Math.round(Math.min(peakLag.value, 100)));
 	background: #e3f2fd;
 	border-radius: 4px;
 	overflow: hidden;
-	margin-right: 6px;
+        margin-inline-end: 6px;
 }
 .cpu-bar-fill {
 	height: 100%;
@@ -318,7 +318,7 @@ const peakPercent = computed(() => Math.round(Math.min(peakLag.value, 100)));
 	width: 10px;
 	height: 10px;
 	border-radius: 50%;
-	margin-right: 4px;
+        margin-inline-end: 4px;
 }
 .legend-dot.client {
 	background: #4caf50;

@@ -160,82 +160,82 @@ body {
 
 /* Directional spacing utilities */
 .dynamic-px-xs {
-	padding-left: var(--dynamic-xs);
-	padding-right: var(--dynamic-xs);
+        padding-inline-start: var(--dynamic-xs);
+        padding-inline-end: var(--dynamic-xs);
 }
 
 .dynamic-px-sm {
-	padding-left: var(--dynamic-sm);
-	padding-right: var(--dynamic-sm);
+        padding-inline-start: var(--dynamic-sm);
+        padding-inline-end: var(--dynamic-sm);
 }
 
 .dynamic-px-md {
-	padding-left: var(--dynamic-md);
-	padding-right: var(--dynamic-md);
+        padding-inline-start: var(--dynamic-md);
+        padding-inline-end: var(--dynamic-md);
 }
 
 .dynamic-px-lg {
-	padding-left: var(--dynamic-lg);
-	padding-right: var(--dynamic-lg);
+        padding-inline-start: var(--dynamic-lg);
+        padding-inline-end: var(--dynamic-lg);
 }
 
 .dynamic-px-xl {
-	padding-left: var(--dynamic-xl);
-	padding-right: var(--dynamic-xl);
+        padding-inline-start: var(--dynamic-xl);
+        padding-inline-end: var(--dynamic-xl);
 }
 
 .dynamic-py-xs {
-	padding-top: var(--dynamic-xs);
-	padding-bottom: var(--dynamic-xs);
+        padding-top: var(--dynamic-xs);
+        padding-bottom: var(--dynamic-xs);
 }
 
 .dynamic-py-sm {
-	padding-top: var(--dynamic-sm);
-	padding-bottom: var(--dynamic-sm);
+        padding-top: var(--dynamic-sm);
+        padding-bottom: var(--dynamic-sm);
 }
 
 .dynamic-py-md {
-	padding-top: var(--dynamic-md);
-	padding-bottom: var(--dynamic-md);
+        padding-top: var(--dynamic-md);
+        padding-bottom: var(--dynamic-md);
 }
 
 .dynamic-py-lg {
-	padding-top: var(--dynamic-lg);
-	padding-bottom: var(--dynamic-lg);
+        padding-top: var(--dynamic-lg);
+        padding-bottom: var(--dynamic-lg);
 }
 
 .dynamic-py-xl {
-	padding-top: var(--dynamic-xl);
-	padding-bottom: var(--dynamic-xl);
+        padding-top: var(--dynamic-xl);
+        padding-bottom: var(--dynamic-xl);
 }
 
 .dynamic-mx-xs {
-	margin-left: var(--dynamic-xs);
-	margin-right: var(--dynamic-xs);
+        margin-inline-start: var(--dynamic-xs);
+        margin-inline-end: var(--dynamic-xs);
 }
 
 .dynamic-mx-sm {
-	margin-left: var(--dynamic-sm);
-	margin-right: var(--dynamic-sm);
+        margin-inline-start: var(--dynamic-sm);
+        margin-inline-end: var(--dynamic-sm);
 }
 
 .dynamic-mx-md {
-	margin-left: var(--dynamic-md);
-	margin-right: var(--dynamic-md);
+        margin-inline-start: var(--dynamic-md);
+        margin-inline-end: var(--dynamic-md);
 }
 
 .dynamic-mx-lg {
-	margin-left: var(--dynamic-lg);
-	margin-right: var(--dynamic-lg);
+        margin-inline-start: var(--dynamic-lg);
+        margin-inline-end: var(--dynamic-lg);
 }
 
 .dynamic-mx-xl {
-	margin-left: var(--dynamic-xl);
-	margin-right: var(--dynamic-xl);
+        margin-inline-start: var(--dynamic-xl);
+        margin-inline-end: var(--dynamic-xl);
 }
 
 .dynamic-my-xs {
-	margin-top: var(--dynamic-xs);
+        margin-top: var(--dynamic-xs);
 	margin-bottom: var(--dynamic-xs);
 }
 

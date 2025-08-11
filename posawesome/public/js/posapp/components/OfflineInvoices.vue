@@ -261,8 +261,8 @@ export default {
 	content: "";
 	position: absolute;
 	top: 0;
-	left: 0;
-	right: 0;
+        inset-inline-start: 0;
+        inset-inline-end: 0;
 	height: 4px;
 	background: linear-gradient(90deg, var(--primary-start) 0%, var(--primary-end) 100%);
 }

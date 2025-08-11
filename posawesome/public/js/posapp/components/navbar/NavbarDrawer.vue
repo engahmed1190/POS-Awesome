@@ -144,7 +144,7 @@ export default {
 
 /* Styling for the company name text within the drawer header */
 .drawer-company {
-	margin-left: 12px;
+        margin-inline-start: 12px;
 	flex: 1;
 	font-weight: 500;
 	font-size: 1rem;
@@ -160,7 +160,7 @@ export default {
 
 /* Styling for the title text of navigation drawer list items */
 .drawer-item-title {
-	margin-left: 8px;
+        margin-inline-start: 8px;
 	font-weight: 500;
 	font-size: 0.95rem;
 	color: #000000 !important;

@@ -422,8 +422,8 @@ export default {
 <style scoped>
 /* Compact Menu Button - Better Navbar Integration */
 .menu-btn-compact {
-	margin-left: 8px;
-	margin-right: 4px;
+        margin-inline-start: 8px;
+        margin-inline-end: 4px;
 	padding: 6px 16px;
 	border-radius: 20px;
 	font-weight: 600;
@@ -500,8 +500,8 @@ export default {
 	content: "";
 	position: absolute;
 	top: 0;
-	left: 0;
-	right: 0;
+        inset-inline-start: 0;
+        inset-inline-end: 0;
 	bottom: 0;
 	background: transparent;
 	transition: all 0.3s ease;
@@ -659,7 +659,7 @@ export default {
 	}
 
 	.menu-btn-compact {
-		margin-left: 6px;
+                margin-inline-start: 6px;
 		padding: 5px 14px;
 		min-width: 85px;
 		height: 34px;

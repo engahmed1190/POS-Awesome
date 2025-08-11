@@ -833,7 +833,7 @@ export default {
 }
 
 .action-panel-icon {
-	margin-right: 8px;
+        margin-inline-end: 8px;
 	color: var(--primary-color, #1976d2);
 }
 
@@ -874,7 +874,7 @@ export default {
 }
 
 .item-action-btn .action-label {
-	margin-left: 8px;
+        margin-inline-start: 8px;
 	font-weight: 500;
 	display: none;
 }
@@ -1025,14 +1025,14 @@ export default {
 	content: "";
 	position: absolute;
 	bottom: -2px;
-	left: 0;
+        inset-inline-start: 0;
 	width: 40px;
 	height: 2px;
 	background: linear-gradient(90deg, var(--primary-color, #1976d2), transparent);
 }
 
 .section-icon {
-	margin-right: 10px;
+        margin-inline-end: 10px;
 	color: var(--primary-color, #1976d2);
 	background: rgba(25, 118, 210, 0.1);
 	padding: 6px;
@@ -1114,7 +1114,7 @@ export default {
 
 .currency-symbol {
 	opacity: 0.7;
-	margin-right: 2px;
+        margin-inline-end: 2px;
 	font-size: 0.85em;
 }
 
