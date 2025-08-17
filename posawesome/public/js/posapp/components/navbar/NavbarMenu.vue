@@ -373,12 +373,12 @@ export default {
 				(this.selectedLanguage === 'ar' && this.selectedNumberFormat !== this.currentNumberFormat)) && 
 				!this.changing;
 		},
-		availableNumberFormats() {
-			return [
-				{ code: 'Western', name: this.numberFormatNames.western },
-				{ code: 'Arabic', name: this.numberFormatNames.arabic }
-			];
-		},
+                availableNumberFormats() {
+                        return [
+                                { code: 'western', name: this.numberFormatNames.western },
+                                { code: 'arabic', name: this.numberFormatNames.arabic }
+                        ];
+                },
 	},
 	watch: {
 		selectedLanguage(newLang) {
