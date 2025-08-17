@@ -6,7 +6,7 @@ const formatUtils = {
 		numberFormat: null,
 		currencySymbols: {},
 		lastChecked: null,
-		ttl: 5 * 60 * 1000 // 5 minutes TTL
+		ttl: 5 * 60 * 1000, // 5 minutes TTL
 	},
 	// Get the current number format preference using utility functions
 	async getCurrentNumberFormat() {
@@ -15,20 +15,26 @@ const formatUtils = {
 			if (window.frappe && window.frappe.call) {
 				try {
 					const response = await frappe.call({
-						method: 'posawesome.posawesome.api.utilities.get_current_user_language'
+						method: "posawesome.posawesome.api.utilities.get_current_user_language",
 					});
 
 					if (response?.message?.success) {
 						// Get POS Profile settings if available
 						const posProfile = window.pos_profile?.name;
 						if (posProfile) {
-							const posResponse = await frappe.call({
-								method: 'posawesome.posawesome.api.utilities.get_pos_profile_number_system',
-								args: [posProfile]
-							});
+							try {
+								const posResponse = await frappe.call({
+									method: "posawesome.posawesome.api.utilities.get_pos_profile_number_system",
+									args: { pos_profile: posProfile },
+								});
 
-							if (posResponse?.message) {
-								return posResponse.message.toLowerCase();
+								if (posResponse?.message) {
+									return posResponse.message.toLowerCase();
+								}
+
+								console.error("Failed to load number system:", posResponse);
+							} catch (error) {
+								console.error("Error fetching number system:", error);
 							}
 						}
 					}
@@ -43,10 +49,10 @@ const formatUtils = {
 			}
 
 			// Default fallback
-			return 'western';
+			return "western";
 		} catch (error) {
 			console.warn("Error reading number format:", error);
-			return 'western';
+			return "western";
 		}
 	},
 
@@ -57,7 +63,7 @@ const formatUtils = {
 			if (window.frappe && window.frappe.call) {
 				try {
 					const response = await frappe.call({
-						method: 'posawesome.posawesome.api.utilities.get_current_user_language'
+						method: "posawesome.posawesome.api.utilities.get_current_user_language",
 					});
 
 					if (response?.message?.success) {
@@ -79,17 +85,17 @@ const formatUtils = {
 			}
 
 			// Default fallback
-			return 'en';
+			return "en";
 		} catch (error) {
 			console.warn("Error reading language:", error);
-			return 'en';
+			return "en";
 		}
 	},
 
 	data() {
 		return {
 			float_precision: 2,
-			currency_precision: 2
+			currency_precision: 2,
 		};
 	},
 
@@ -104,7 +110,7 @@ const formatUtils = {
 			this._cache.lastChecked = Date.now();
 
 			return {
-				isArabic: currentLang?.startsWith('ar') && numberFormat?.toLowerCase() === 'arabic'
+				isArabic: currentLang?.startsWith("ar") && numberFormat?.toLowerCase() === "arabic",
 			};
 		} catch (error) {
 			console.warn("Error initializing number format:", error);
@@ -116,13 +122,12 @@ const formatUtils = {
 	shouldUseArabicNumerals() {
 		try {
 			// Use cache if available and not expired
-			if (this._cache.lastChecked &&
-				(Date.now() - this._cache.lastChecked) < this._cache.ttl) {
+			if (this._cache.lastChecked && Date.now() - this._cache.lastChecked < this._cache.ttl) {
 				const currentLang = this._cache.currentLanguage;
 				const numberFormat = this._cache.numberFormat;
 
 				if (currentLang && numberFormat) {
-					return currentLang.startsWith('ar') && numberFormat.toLowerCase() === 'arabic';
+					return currentLang.startsWith("ar") && numberFormat.toLowerCase() === "arabic";
 				}
 			}
 
@@ -139,7 +144,7 @@ const formatUtils = {
 		try {
 			// First try to get language from current user settings
 			let currentLang = null;
-			
+
 			// Try to get from API response if available
 			if (window.frappe?.boot?.lang) {
 				currentLang = window.frappe.boot.lang;
@@ -148,16 +153,16 @@ const formatUtils = {
 			} else if (window.pos_profile?.posa_language) {
 				currentLang = window.pos_profile.posa_language;
 			} else {
-				currentLang = 'en';
+				currentLang = "en";
 			}
 
 			// For Arabic language, check number format
-			if (currentLang?.startsWith('ar')) {
+			if (currentLang?.startsWith("ar")) {
 				// First check POS Profile setting if available
 				if (window.pos_profile?.posa_number_system) {
-					return window.pos_profile.posa_number_system.toLowerCase() === 'arabic';
+					return window.pos_profile.posa_number_system.toLowerCase() === "arabic";
 				}
-				
+
 				// If no POS Profile, default to Arabic numerals for Arabic language
 				return true;
 			}
@@ -173,8 +178,16 @@ const formatUtils = {
 	toArabicNumerals(str) {
 		if (!this.shouldUseArabicNumerals()) return str;
 		const westernToArabic = {
-			'0': '٠', '1': '١', '2': '٢', '3': '٣', '4': '٤',
-			'5': '٥', '6': '٦', '7': '٧', '8': '٨', '9': '٩'
+			0: "٠",
+			1: "١",
+			2: "٢",
+			3: "٣",
+			4: "٤",
+			5: "٥",
+			6: "٦",
+			7: "٧",
+			8: "٨",
+			9: "٩",
 		};
 		return String(str).replace(/[0-9]/g, (match) => westernToArabic[match]);
 	},
@@ -182,26 +195,34 @@ const formatUtils = {
 	// Convert Arabic-Indic numerals back to Western numerals
 	fromArabicNumerals(str) {
 		const arabicToWestern = {
-			'٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4',
-			'٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9'
+			"٠": "0",
+			"١": "1",
+			"٢": "2",
+			"٣": "3",
+			"٤": "4",
+			"٥": "5",
+			"٦": "6",
+			"٧": "7",
+			"٨": "8",
+			"٩": "9",
 		};
 		return String(str).replace(/[٠-٩]/g, (match) => arabicToWestern[match]);
 	},
 
 	// Parse number input considering current number format
 	parseNumberInput(input) {
-		if (!input || input.trim() === '') return '0';
+		if (!input || input.trim() === "") return "0";
 
 		let cleanedInput = String(input).trim();
 
 		// Handle Arabic separators and numerals
 		if (this.shouldUseArabicNumerals()) {
-			cleanedInput = cleanedInput.replace(/٫/g, '.').replace(/،/g, '');
+			cleanedInput = cleanedInput.replace(/٫/g, ".").replace(/،/g, "");
 			cleanedInput = this.fromArabicNumerals(cleanedInput);
 		}
 
 		// Remove thousand separators
-		return cleanedInput.replace(/,(?=\d{3})/g, '');
+		return cleanedInput.replace(/,(?=\d{3})/g, "");
 	},
 
 	// Add cache clearing method
@@ -211,16 +232,16 @@ const formatUtils = {
 		this._cache.numberFormat = null;
 		this._cache.lastChecked = null;
 		this._cache.currencySymbols = {};
-		
+
 		// Force re-initialization of number format
-		this._initNumberFormat().catch(error => {
+		this._initNumberFormat().catch((error) => {
 			console.warn("Error reinitializing number format:", error);
 		});
-	}
+	},
 };
 
 // Make formatUtils available globally for other components to access
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
 	window.formatUtils = formatUtils;
 }
 
@@ -251,11 +272,11 @@ export default {
 				const prec = Math.min(Math.max(Number(precision) || this.currency_precision || 2, 0), 20);
 
 				const useArabic = formatUtils.shouldUseArabicNumerals();
-				const locale = useArabic ? 'ar-SA' : 'en-US';
+				const locale = useArabic ? "ar-SA" : "en-US";
 				let formatted = number.toLocaleString(locale, {
 					minimumFractionDigits: prec,
 					maximumFractionDigits: prec,
-					useGrouping: true
+					useGrouping: true,
 				});
 
 				return useArabic ? formatUtils.toArabicNumerals(formatted) : formatted;
@@ -274,11 +295,11 @@ export default {
 				const prec = Math.min(Math.max(Number(precision) || this.float_precision || 2, 0), 20);
 
 				const useArabic = formatUtils.shouldUseArabicNumerals();
-				const locale = useArabic ? 'ar-SA' : 'en-US';
+				const locale = useArabic ? "ar-SA" : "en-US";
 				let formatted = number.toLocaleString(locale, {
 					minimumFractionDigits: prec,
 					maximumFractionDigits: prec,
-					useGrouping: true
+					useGrouping: true,
 				});
 
 				return useArabic ? formatUtils.toArabicNumerals(formatted) : formatted;
@@ -298,11 +319,11 @@ export default {
 				const prec = Math.min(Math.max(Number(precision) || this.currency_precision || 2, 0), 20);
 
 				const useArabic = formatUtils.shouldUseArabicNumerals();
-				const locale = useArabic ? 'ar-SA' : 'en-US';
+				const locale = useArabic ? "ar-SA" : "en-US";
 				let formatted = number.toLocaleString(locale, {
 					minimumFractionDigits: prec,
 					maximumFractionDigits: prec,
-					useGrouping: true
+					useGrouping: true,
 				});
 
 				return useArabic ? formatUtils.toArabicNumerals(formatted) : formatted;
@@ -321,11 +342,11 @@ export default {
 				const prec = Math.min(Math.max(Number(precision) || this.float_precision || 2, 0), 20);
 
 				const useArabic = formatUtils.shouldUseArabicNumerals();
-				const locale = useArabic ? 'ar-SA' : 'en-US';
+				const locale = useArabic ? "ar-SA" : "en-US";
 				let formatted = number.toLocaleString(locale, {
 					minimumFractionDigits: prec,
 					maximumFractionDigits: prec,
-					useGrouping: true
+					useGrouping: true,
 				});
 
 				return useArabic ? formatUtils.toArabicNumerals(formatted) : formatted;
@@ -376,15 +397,15 @@ export default {
 
 				// Add any missing common symbols
 				const commonSymbols = {
-					'USD': '$',
-					'EUR': '€',
-					'GBP': '£',
-					'JPY': '¥',
-					'CNY': '¥',
-					'INR': '₹',
-					'EGP': 'ج.م',
-					'SAR': 'ر.س',
-					'AED': 'د.إ'
+					USD: "$",
+					EUR: "€",
+					GBP: "£",
+					JPY: "¥",
+					CNY: "¥",
+					INR: "₹",
+					EGP: "ج.م",
+					SAR: "ر.س",
+					AED: "د.إ",
 				};
 
 				for (const [currency, symbol] of Object.entries(commonSymbols)) {
@@ -403,7 +424,7 @@ export default {
 		// Get currency symbol (synchronous with cache)
 		currencySymbol(currency) {
 			try {
-				if (!currency) return '';
+				if (!currency) return "";
 
 				// Use cached symbols if available
 				if (this._cache.currencySymbols[currency]) {
@@ -414,7 +435,7 @@ export default {
 				return currency;
 			} catch (error) {
 				console.warn("Error getting currency symbol:", error);
-				return currency || '';
+				return currency || "";
 			}
 		},
 
@@ -442,7 +463,7 @@ export default {
 
 		// Synchronous versions for backward compatibility
 		getNumberFormatSync() {
-			return formatUtils.shouldUseArabicNumeralsSync() ? 'arabic' : 'western';
+			return formatUtils.shouldUseArabicNumeralsSync() ? "arabic" : "western";
 		},
 
 		isArabicNumeralsEnabledSync() {
@@ -455,13 +476,13 @@ export default {
 
 		validateNumber(value) {
 			return this.isNumber(value);
-		}
+		},
 	},
 	async mounted() {
 		try {
 			// Wait for Frappe to be ready
 			if (!window.frappe) {
-				await new Promise(resolve => {
+				await new Promise((resolve) => {
 					const checkFrappe = setInterval(() => {
 						if (window.frappe) {
 							clearInterval(checkFrappe);
@@ -472,8 +493,8 @@ export default {
 			}
 
 			// Initialize precision after Frappe is ready
-			this.float_precision = (frappe.defaults?.get_default("float_precision") ?? 2);
-			this.currency_precision = (frappe.defaults?.get_default("currency_precision") ?? 2);
+			this.float_precision = frappe.defaults?.get_default("float_precision") ?? 2;
+			this.currency_precision = frappe.defaults?.get_default("currency_precision") ?? 2;
 
 			// Initialize formatUtils cache
 			await formatUtils._initNumberFormat();
@@ -487,12 +508,9 @@ export default {
 						this.currency_precision = prec;
 					}
 					// Update caches when profile changes
-					Promise.all([
-						formatUtils._initNumberFormat(),
-						this._initCurrencySymbols()
-					]);
+					Promise.all([formatUtils._initNumberFormat(), this._initCurrencySymbols()]);
 				} catch (error) {
-					console.warn('Error updating precision:', error);
+					console.warn("Error updating precision:", error);
 				}
 			};
 
@@ -505,7 +523,7 @@ export default {
 					}
 
 					// Dispatch event for other components
-					window.dispatchEvent(new CustomEvent('posawesome_format_settings_refreshed'));
+					window.dispatchEvent(new CustomEvent("posawesome_format_settings_refreshed"));
 				} catch (error) {
 					console.warn("Error refreshing format settings:", error);
 				}
@@ -518,9 +536,9 @@ export default {
 			}
 
 			// Listen for number format changes from NavbarMenu
-			window.addEventListener('posawesome_number_format_changed', this.refreshFormatSettings);
+			window.addEventListener("posawesome_number_format_changed", this.refreshFormatSettings);
 		} catch (error) {
-			console.error('Error during format.js initialization:', error);
+			console.error("Error during format.js initialization:", error);
 		}
 	},
 
@@ -533,9 +551,9 @@ export default {
 			}
 
 			// Remove global event listener
-			window.removeEventListener('posawesome_number_format_changed', this.refreshFormatSettings);
+			window.removeEventListener("posawesome_number_format_changed", this.refreshFormatSettings);
 		} catch (error) {
-			console.error('Error during format.js cleanup:', error);
+			console.error("Error during format.js cleanup:", error);
 		}
-	}
+	},
 };
