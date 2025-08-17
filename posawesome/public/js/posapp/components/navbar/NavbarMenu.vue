@@ -434,20 +434,24 @@ export default {
 			this.changing = true;
 			try {
 				// Use the new set_current_user_language function from utilities.py
-				console.log('Calling set_current_user_language with args:', {
-					lang_code: this.selectedLanguage,
-					pos_profile: this.posProfile?.name,
-					number_system: this.selectedLanguage === 'ar' ? (this.selectedNumberFormat === 'arabic' ? 'Arabic' : 'Western') : 'Western'
-				});
+                                const numberSystem = this.selectedLanguage === 'ar'
+                                        ? this.normalizeNumberSystem(this.selectedNumberFormat)
+                                        : 'Western';
 
-				const response = await frappe.call({
-					method: 'posawesome.posawesome.api.utilities.set_current_user_language',
-					args: {
-						lang_code: this.selectedLanguage,
-						pos_profile: this.posProfile?.name,
-						number_system: this.selectedLanguage === 'ar' ? (this.selectedNumberFormat === 'arabic' ? 'Arabic' : 'Western') : 'Western'
-					}
-				});
+                                console.log('Calling set_current_user_language with args:', {
+                                        lang_code: this.selectedLanguage,
+                                        pos_profile: this.posProfile?.name,
+                                        number_system: numberSystem
+                                });
+
+                                const response = await frappe.call({
+                                        method: 'posawesome.posawesome.api.utilities.set_current_user_language',
+                                        args: {
+                                                lang_code: this.selectedLanguage,
+                                                pos_profile: this.posProfile?.name,
+                                                number_system: numberSystem
+                                        }
+                                });
 
 				console.log('Got response:', response);
 
@@ -467,8 +471,8 @@ export default {
 					if (window.pos_profile) {
 						console.log('Updating global POS Profile...');
 						window.pos_profile.posa_language = this.currentLanguage;
-						window.pos_profile.posa_number_system = this.currentNumberFormat === 'arabic' ? 'Arabic' : 'Western';
-					}
+                                                window.pos_profile.posa_number_system = this.normalizeNumberSystem(this.currentNumberFormat);
+                                        }
 					
 					// Dispatch event for other components
 					console.log('Dispatching number format change event...');
@@ -688,11 +692,11 @@ export default {
 		},
 
 		// Get system language
-		getSystemLanguage() {
-			try {
-				if (window.frappe?.boot?.user?.language) {
-					return window.frappe.boot.user.language;
-				}
+                getSystemLanguage() {
+                        try {
+                                if (window.frappe?.boot?.user?.language) {
+                                        return window.frappe.boot.user.language;
+                                }
 				if (window.frappe?.boot?.lang) {
 					return window.frappe.boot.lang;
 				}
@@ -707,15 +711,19 @@ export default {
 					};
 					return languageMap[browserLang] || 'en';
 				}
-				return 'en';
-			} catch (error) {
-				console.warn("Error getting system language:", error);
-				return 'en';
-			}
-		},
+                                return 'en';
+                        } catch (error) {
+                                console.warn("Error getting system language:", error);
+                                return 'en';
+                        }
+                },
 
-		// Notification methods
-		showNotification(message, type = "info", timeout = 3000) {
+                normalizeNumberSystem(format) {
+                        return (format || '').toLowerCase() === 'arabic' ? 'Arabic' : 'Western';
+                },
+
+                // Notification methods
+                showNotification(message, type = "info", timeout = 3000) {
 			Object.assign(this.notification, {
 				show: true,
 				message: this.__(message),
