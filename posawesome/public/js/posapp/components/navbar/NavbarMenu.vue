@@ -128,7 +128,11 @@
 				</v-list-item>
 
 				<!-- Language selection menu item -->
-				<v-list-item @click="showLanguageDialog = true" class="menu-item-compact primary-action">
+				<v-list-item 
+					v-if="hasPOSProfile"
+					@click="showLanguageDialog = true" 
+					class="menu-item-compact primary-action"
+				>
 					<template v-slot:prepend>
 						<div class="menu-icon-wrapper-compact primary-icon">
 							<v-icon color="white" size="16">mdi-translate</v-icon>
@@ -205,33 +209,70 @@
 					density="compact"
 					:loading="loading"
 					:disabled="loading"
+					:hint="__('Select your preferred interface language')"
+					persistent-hint
+					class="language-select"
+				>
+					<template #item="{ item, props }">
+						<v-list-item v-bind="props" class="language-item">
+							<template #prepend>
+								<v-icon :color="item.raw.code === currentLanguage ? 'primary' : 'grey'" class="language-icon">
+									{{ item.raw.code === currentLanguage ? 'mdi-check-circle' : 'mdi-translate' }}
+								</v-icon>
+							</template>
+							<div class="language-content">
+								<v-list-item-title class="language-name">
+									{{ item.raw.name }}
+									<span class="language-code">({{ item.raw.code.toUpperCase() }})</span>
+								</v-list-item-title>
+								<v-list-item-subtitle v-if="item.raw.code !== 'en'" class="native-name">
+									{{ item.raw.native_name }}
+								</v-list-item-subtitle>
+							</div>
+						</v-list-item>
+					</template>
+				</v-select>
+
+				<!-- Number Format Selection - Only show for Arabic language -->
+				<v-select
+					v-if="selectedLanguage === 'ar'"
+					v-model="selectedNumberFormat"
+					:items="availableNumberFormats"
+					item-title="name"
+					item-value="code"
+					:label="__('Number Format')"
+					variant="outlined"
+					density="compact"
+					:loading="loading"
+					:disabled="loading"
+					class="mt-3"
 				>
 					<template #item="{ item, props }">
 						<v-list-item v-bind="props">
 							<template #prepend>
-								<v-icon :color="item.raw.code === currentLanguage ? 'primary' : 'grey'">
-									{{ item.raw.code === currentLanguage ? 'mdi-check-circle' : 'mdi-circle-outline' }}
+								<v-icon :color="item.raw.code === currentNumberFormat ? 'primary' : 'grey'">
+									{{ item.raw.code === currentNumberFormat ? 'mdi-check-circle' : 'mdi-circle-outline' }}
 								</v-icon>
 							</template>
 							<v-list-item-title>
-								{{ item.raw.name }} ({{ item.raw.code.toUpperCase() }})
+								{{ __(item.raw.name) }}
 							</v-list-item-title>
-							<v-list-item-subtitle v-if="item.raw.code !== 'en'">
-								{{ item.raw.native_name }}
-							</v-list-item-subtitle>
 						</v-list-item>
 					</template>
 				</v-select>
 
 				<v-alert
-					v-if="selectedLanguage !== currentLanguage"
+					v-if="selectedLanguage !== currentLanguage || (selectedLanguage === 'ar' && selectedNumberFormat !== currentNumberFormat)"
 					type="info"
 					variant="tonal"
 					density="compact"
 					class="mt-3"
 				>
-					{{ __("Language will be changed to") }}: 
+					{{ __("Settings will be changed to") }}: 
 					<strong>{{ selectedLanguageName }}</strong>
+					<span v-if="selectedLanguage === 'ar' && selectedNumberFormat !== currentNumberFormat">
+						, {{ selectedNumberFormatName }}
+					</span>
 				</v-alert>
 			</v-card-text>
 
@@ -248,10 +289,10 @@
 				<v-btn
 					color="primary"
 					:loading="changing"
-					:disabled="!canChangeLanguage"
+					:disabled="!canChangeSettings"
 					@click="changeLanguage"
 				>
-					{{ __("Change Language") }}
+					{{ __("Change Settings") }}
 				</v-btn>
 			</v-card-actions>
 		</v-card>
@@ -297,6 +338,8 @@ export default {
 			selectedLanguage: "en",
 			currentLanguage: "en",
 			availableLanguages: FALLBACK_LANGUAGES,
+			selectedNumberFormat: "western",
+			currentNumberFormat: "western",
 			loading: false,
 			changing: false,
 			notification: {
@@ -308,87 +351,370 @@ export default {
 		};
 	},
 	computed: {
-		canChangeLanguage() {
-			return this.selectedLanguage !== this.currentLanguage && !this.changing;
+		hasPOSProfile() {
+			return this.posProfile && Object.keys(this.posProfile).length > 0;
 		},
 		selectedLanguageName() {
 			const lang = this.availableLanguages.find(l => l.code === this.selectedLanguage);
 			return lang?.name || this.selectedLanguage.toUpperCase();
 		},
+		numberFormatNames() {
+			return {
+				western: this.__('English numerals'),
+				arabic: this.__('Arabic numerals')
+			};
+		},
+		selectedNumberFormatName() {
+			return this.numberFormatNames[this.selectedNumberFormat] || this.selectedNumberFormat;
+		},
+		canChangeSettings() {
+			return this.hasPOSProfile && 
+				(this.selectedLanguage !== this.currentLanguage || 
+				(this.selectedLanguage === 'ar' && this.selectedNumberFormat !== this.currentNumberFormat)) && 
+				!this.changing;
+		},
+		availableNumberFormats() {
+			return [
+				{ code: 'Western', name: this.numberFormatNames.western },
+				{ code: 'Arabic', name: this.numberFormatNames.arabic }
+			];
+		},
+	},
+	watch: {
+		selectedLanguage(newLang) {
+			// Auto-reset number format when switching away from Arabic
+			if (newLang !== 'ar') {
+				this.selectedNumberFormat = 'western';
+			}
+		}
 	},
 	async mounted() {
-		await this.initializeLanguage();
+		try {
+			const { waitForFrappe } = await import('../../utils/frappe_loader.js');
+			
+			await waitForFrappe(async () => {
+				console.log('NavbarMenu mounted, starting initialization...');
+				await this.initializeLanguage();
+				this.setupPOSProfileListener();
+			}, {
+				timeout: 45000, // Increased timeout for slower connections
+				clearCache: true, // Enable automatic cache clearing
+				interval: 200 // Slightly longer interval to reduce CPU usage
+			});
+		} catch (error) {
+			console.error('Error during NavbarMenu initialization:', error);
+			this.showNotification(
+				this.__('Failed to initialize menu. Please try clearing your browser cache or use Ctrl+Shift+R to refresh.'),
+				'error',
+				8000
+			);
+		}
 	},
 	methods: {
+		// Core language change functionality
 		async changeLanguage() {
-			if (!this.canChangeLanguage) {
-				this.showNotification("Cannot change language - same language selected", "warning");
+			if (!this.canChangeSettings) {
+				console.log('Cannot change settings - disabled');
+				return;
+			}
+			
+			if (!this.hasPOSProfile) {
+				console.log('No POS Profile available');
+				this.showNotification(this.__("POS Profile is required to change language settings"), "error");
 				return;
 			}
 
+			console.log('Starting language change process...');
+			console.log('Current settings:', {
+				selectedLanguage: this.selectedLanguage,
+				posProfile: this.posProfile?.name,
+				numberFormat: this.selectedNumberFormat
+			});
+
 			this.changing = true;
 			try {
-				const response = await frappe.call({
-					method: 'posawesome.posawesome.api.utilities.set_current_user_language',
-					args: { lang_code: this.selectedLanguage }
+				// Use the new set_current_user_language function from utilities.py
+				console.log('Calling set_current_user_language with args:', {
+					lang_code: this.selectedLanguage,
+					pos_profile: this.posProfile?.name,
+					number_system: this.selectedLanguage === 'ar' ? (this.selectedNumberFormat === 'arabic' ? 'Arabic' : 'Western') : 'Western'
 				});
 
-				const result = response?.message || response;
-				
-				if (result?.success) {
-					this.currentLanguage = this.selectedLanguage;
+				const response = await frappe.call({
+					method: 'posawesome.posawesome.api.utilities.set_current_user_language',
+					args: {
+						lang_code: this.selectedLanguage,
+						pos_profile: this.posProfile?.name,
+						number_system: this.selectedLanguage === 'ar' ? (this.selectedNumberFormat === 'arabic' ? 'Arabic' : 'Western') : 'Western'
+					}
+				});
+
+				console.log('Got response:', response);
+
+				if (response?.message?.success) {
+					console.log('Language change successful, updating settings...');
 					
-					if (window.frappe && window.frappe.boot) {
-						window.frappe.boot.lang = this.selectedLanguage;
+					// Update current settings
+					this.currentLanguage = this.selectedLanguage;
+					this.currentNumberFormat = this.selectedLanguage === 'ar' ? this.selectedNumberFormat : 'western';
+					
+					console.log('Updated local settings:', {
+						currentLanguage: this.currentLanguage,
+						currentNumberFormat: this.currentNumberFormat
+					});
+					
+					// Update global POS Profile object
+					if (window.pos_profile) {
+						console.log('Updating global POS Profile...');
+						window.pos_profile.posa_language = this.currentLanguage;
+						window.pos_profile.posa_number_system = this.currentNumberFormat === 'arabic' ? 'Arabic' : 'Western';
 					}
 					
-					this.showNotification("Language changed successfully! Reloading...", "success");
+					// Dispatch event for other components
+					console.log('Dispatching number format change event...');
+					window.dispatchEvent(new CustomEvent('posawesome_number_format_changed', {
+						detail: { 
+							language: this.currentLanguage,
+							numberFormat: this.currentNumberFormat 
+						}
+					}));
+					
+					// Clear translations and refresh
+					console.log('Clearing user cache...');
+					try {
+						await frappe.call({
+							method: 'frappe.core.doctype.user.user.clear_cache'
+						});
+						console.log('Cache cleared successfully');
+					} catch (cacheError) {
+						console.error('Error clearing cache:', cacheError);
+						frappe.msgprint({
+							title: __('Warning'),
+							indicator: 'orange',
+							message: __('Cache clearing had an error, but settings were saved. You may need to refresh manually.')
+						});
+					}
+					
+					this.showNotification("Language and number system updated successfully! Reloading...", "success");
 					this.closeLanguageDialog();
 					
-					this.$emit('clear-cache');
-					
+					// Reload after a short delay
+					console.log('Scheduling page reload...');
 					setTimeout(() => {
-						window.location.reload();
+						console.log('Reloading page...');
+						window.location.href = window.location.href.split('#')[0];
 					}, 2000);
 				} else {
-					const errorMsg = result?.message || "Failed to change language";
+					console.error('Language change failed:', response?.message);
+					const errorMsg = response?.message?.message || "Failed to update settings";
 					this.showNotification(errorMsg, "error");
 				}
 			} catch (error) {
-				this.showNotification(`Failed to change language: ${error.message || 'Unknown error'}`, "error");
+				console.error("Error changing language:", error);
+				console.log('Error details:', {
+					message: error.message,
+					stack: error.stack,
+					response: error.response
+				});
+				this.showNotification(`Failed to change settings: ${error.message || 'Unknown error'}`, "error");
 			} finally {
+				console.log('Language change process completed');
 				this.changing = false;
 			}
 		},
 
+		// Initialize language settings
 		async initializeLanguage() {
 			this.loading = true;
 			try {
-				const response = await frappe.call({
-					method: 'posawesome.posawesome.api.utilities.get_current_user_language'
-				});
+				await this.loadSettingsFromPOSProfile();
 				
-				const result = response?.message || response;
-				
-				if (result?.success) {
-					Object.assign(this, {
-						availableLanguages: result.available_languages,
-						currentLanguage: result.language_code,
-						selectedLanguage: result.language_code,
+				// Get available languages from the utility function
+				try {
+					const availableLanguagesResponse = await frappe.call({
+						method: 'posawesome.posawesome.api.utilities.get_available_languages'
 					});
+
+					if (availableLanguagesResponse?.message) {
+						this.availableLanguages = availableLanguagesResponse.message;
+					} else {
+						// Fallback to hardcoded languages
+						this.availableLanguages = [
+							{ code: 'en', name: 'English', native_name: 'English' },
+							{ code: 'ar', name: 'Arabic', native_name: 'العربية' },
+							{ code: 'fr', name: 'French', native_name: 'Français' },
+							{ code: 'es', name: 'Spanish', native_name: 'Español' },
+							{ code: 'de', name: 'German', native_name: 'Deutsch' },
+							{ code: 'it', name: 'Italian', native_name: 'Italiano' },
+							{ code: 'pt', name: 'Portuguese', native_name: 'Português' },
+							{ code: 'ru', name: 'Russian', native_name: 'Русский' },
+							{ code: 'zh', name: 'Chinese', native_name: '中文' },
+							{ code: 'ja', name: 'Japanese', native_name: '日本語' }
+						];
+					}
+				} catch (error) {
+					console.warn("Error getting available languages, using fallback:", error);
+					this.availableLanguages = FALLBACK_LANGUAGES;
 				}
 			} catch (error) {
 				console.error("Error initializing language:", error);
+				this.availableLanguages = FALLBACK_LANGUAGES;
 			} finally {
 				this.loading = false;
 			}
 		},
 
+		// Close language dialog
 		closeLanguageDialog() {
 			this.showLanguageDialog = false;
 			this.selectedLanguage = this.currentLanguage;
+			this.selectedNumberFormat = this.currentLanguage === 'ar' ? this.currentNumberFormat : 'western';
 		},
 
+		// Load settings from POS Profile
+		async loadSettingsFromPOSProfile() {
+			try {
+				// First try to get user language from the new utility function
+				const userLanguageResponse = await frappe.call({
+					method: 'posawesome.posawesome.api.utilities.get_current_user_language'
+				});
+
+				if (userLanguageResponse?.message?.success) {
+					const userData = userLanguageResponse.message;
+					this.currentLanguage = userData.language_code;
+					this.selectedLanguage = userData.language_code;
+				} else {
+					// Fallback to system language detection
+					const systemLanguage = this.getSystemLanguage();
+					this.currentLanguage = systemLanguage;
+					this.selectedLanguage = systemLanguage;
+				}
+				
+				// Get POS Profile settings if available
+				if (this.posProfile?.name) {
+					try {
+						const posSettingsResponse = await frappe.call({
+							method: 'posawesome.posawesome.api.utilities.get_pos_profile_settings',
+							args: {
+								pos_profile: this.posProfile?.name
+							}
+						});
+
+						if (posSettingsResponse?.message?.success) {
+							const posData = posSettingsResponse.message;
+							const currentLang = posData.current_language || this.currentLanguage;
+							
+							// Update language if POS Profile has a different setting
+							if (currentLang !== this.currentLanguage) {
+								this.currentLanguage = currentLang;
+								this.selectedLanguage = currentLang;
+							}
+
+							// Set number format based on language and POS Profile setting
+							if (currentLang === 'ar') {
+								const numberSystem = posData.current_number_system || 'Western';
+								const numberFormat = numberSystem.toLowerCase() === 'arabic' ? 'arabic' : 'western';
+								this.currentNumberFormat = numberFormat;
+								this.selectedNumberFormat = numberFormat;
+							} else {
+								this.currentNumberFormat = 'western';
+								this.selectedNumberFormat = 'western';
+							}
+						} else {
+							// Fallback to POS Profile object
+							this.setNumberFormatFromPOSProfile();
+						}
+					} catch (error) {
+						console.warn("Error getting POS Profile settings, using fallback:", error);
+						this.setNumberFormatFromPOSProfile();
+					}
+				} else {
+					this.currentNumberFormat = 'western';
+					this.selectedNumberFormat = 'western';
+				}
+			} catch (error) {
+				console.error("Error loading settings:", error);
+				this.currentLanguage = 'en';
+				this.selectedLanguage = 'en';
+				this.currentNumberFormat = 'western';
+				this.selectedNumberFormat = 'western';
+			}
+		},
+
+		// Fallback method to set number format from POS Profile object
+		setNumberFormatFromPOSProfile() {
+			if (this.posProfile) {
+				if (this.currentLanguage === 'ar') {
+					const numberSystem = this.posProfile.posa_number_system || 'Western';
+					const numberFormat = numberSystem.toLowerCase() === 'arabic' ? 'arabic' : 'western';
+					this.currentNumberFormat = numberFormat;
+					this.selectedNumberFormat = numberFormat;
+				} else {
+					this.currentNumberFormat = 'western';
+					this.selectedNumberFormat = 'western';
+				}
+			} else {
+				this.currentNumberFormat = 'western';
+				this.selectedNumberFormat = 'western';
+			}
+		},
+
+		// Open language dialog safely
+		openLanguageDialog() {
+			try {
+				// Reset selections to current values
+				this.selectedLanguage = this.currentLanguage;
+				this.selectedNumberFormat = this.currentLanguage === 'ar' ? this.currentNumberFormat : 'western';
+				this.showLanguageDialog = true;
+			} catch (error) {
+				console.error("Error opening dialog:", error);
+				this.showNotification("Failed to open language dialog", "error");
+			}
+		},
+
+		// Setup POS Profile listener
+		setupPOSProfileListener() {
+			if (this.eventBus && this.eventBus.on) {
+				this.eventBus.on("pos_profile_changed", async () => {
+					await this.loadSettingsFromPOSProfile();
+					window.dispatchEvent(new CustomEvent('posawesome_number_format_changed', {
+						detail: { 
+							language: this.currentLanguage,
+							numberFormat: this.currentNumberFormat 
+						}
+					}));
+				});
+			}
+		},
+
+		// Get system language
+		getSystemLanguage() {
+			try {
+				if (window.frappe?.boot?.user?.language) {
+					return window.frappe.boot.user.language;
+				}
+				if (window.frappe?.boot?.lang) {
+					return window.frappe.boot.lang;
+				}
+				if (document.documentElement.lang) {
+					return document.documentElement.lang;
+				}
+				if (navigator.language) {
+					const browserLang = navigator.language.split('-')[0];
+					const languageMap = {
+						'ar': 'ar', 'en': 'en', 'fr': 'fr', 'es': 'es', 'de': 'de',
+						'it': 'it', 'pt': 'pt', 'ru': 'ru', 'zh': 'zh', 'ja': 'ja'
+					};
+					return languageMap[browserLang] || 'en';
+				}
+				return 'en';
+			} catch (error) {
+				console.warn("Error getting system language:", error);
+				return 'en';
+			}
+		},
+
+		// Notification methods
 		showNotification(message, type = "info", timeout = 3000) {
 			Object.assign(this.notification, {
 				show: true,
@@ -777,6 +1103,66 @@ export default {
 		rgba(144, 202, 249, 0.05) 0%,
 		rgba(144, 202, 249, 0.08) 100%
 	) !important;
+}
+
+/* Language Selector Styles */
+.language-select {
+	margin-bottom: 8px;
+}
+
+.language-item {
+	padding: 12px 16px;
+	transition: all 0.2s ease;
+}
+
+.language-item:hover {
+	background-color: rgba(25, 118, 210, 0.04);
+}
+
+.language-icon {
+	margin-right: 12px;
+	transition: transform 0.2s ease;
+}
+
+.language-item:hover .language-icon {
+	transform: scale(1.1);
+}
+
+.language-content {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.language-name {
+	font-weight: 500;
+	font-size: 14px;
+	color: var(--text-primary, #212121);
+}
+
+.language-code {
+	font-size: 12px;
+	color: var(--text-secondary, #666666);
+	margin-left: 6px;
+	font-weight: normal;
+}
+
+.native-name {
+	font-size: 12px;
+	color: var(--text-secondary, #666666);
+	font-style: italic;
+}
+
+:deep([data-theme="dark"]) .language-name,
+:deep(.v-theme--dark) .language-name {
+	color: var(--text-primary, #ffffff);
+}
+
+:deep([data-theme="dark"]) .language-code,
+:deep(.v-theme--dark) .language-code,
+:deep([data-theme="dark"]) .native-name,
+:deep(.v-theme--dark) .native-name {
+	color: var(--text-secondary, #b0b0b0);
 }
 
 /* Dark mode icon adjustments */

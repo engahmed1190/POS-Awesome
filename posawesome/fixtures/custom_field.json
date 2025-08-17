@@ -5601,9 +5601,9 @@
     "sort_options": 0,
     "translatable": 0,
     "unique": 0,
-  "width": null
-  }
-  ,{
+    "width": null
+  },
+  {
     "doctype": "Custom Field",
     "dt": "POS Profile",
     "fieldname": "posa_smart_reload_mode",
@@ -5612,8 +5612,8 @@
     "label": "Smart Reload Mode",
     "default": "1",
     "name": "POS Profile-posa_smart_reload_mode"
-  }
-  ,{
+  },
+  {
     "doctype": "Custom Field",
     "dt": "POS Profile",
     "fieldname": "posa_display_discount_percentage",
@@ -5622,8 +5622,8 @@
     "label": "Display Discount %",
     "default": "1",
     "name": "POS Profile-posa_display_discount_percentage"
-  }
-  ,{
+  },
+  {
     "doctype": "Custom Field",
     "dt": "POS Profile",
     "fieldname": "posa_display_discount_amount",
@@ -5632,8 +5632,20 @@
     "label": "Display Discount Amount",
     "default": "1",
     "name": "POS Profile-posa_display_discount_amount"
-  }
- ,{
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "POS Profile",
+    "fieldname": "posa_number_system",
+    "fieldtype": "Select",
+    "insert_after": "posa_language",
+    "label": "Number System",
+    "options": "Western\nArabic",
+    "description": "Number system to use in POS (Western: 123, Arabic: ١٢٣)",
+    "default": "Western",
+    "name": "POS Profile-posa_number_system"
+  },
+  {
     "doctype": "Custom Field",
     "dt": "POS Profile",
     "fieldname": "posa_silent_print",

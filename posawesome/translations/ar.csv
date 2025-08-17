@@ -111,7 +111,23 @@ Product Discount Scheme,مخطط خصم المنتج
 Promo Type,نوع الترويج
 Qualifying Transaction / Item,معاملة / صنف مؤهل
 Quantity and Amount Conditions,شروط الكمية والمبلغ
-Rate,المعدل
+Rate,سعر الوحدة
+POS Profile not found,ملف تعريف نقطة البيع غير موجود
+POS Profile is disabled,ملف تعريف نقطة البيع معطل
+No active POS Profile found,لم يتم العثور على ملف تعريف نقطة البيع نشط
+POS Profile validation failed,فشل التحقق من صحة ملف تعريف نقطة البيع
+User is disabled,المستخدم معطل
+No POS Profile configured,لم يتم تكوين ملف تعريف نقطة البيع
+POS Profile name is required,اسم ملف تعريف نقطة البيع مطلوب
+Invalid POS Profile name,اسم ملف تعريف نقطة البيع غير صالح
+Failed to get POS Profile settings,فشل في الحصول على إعدادات ملف تعريف نقطة البيع
+POS Profile is valid,ملف تعريف نقطة البيع صالح
+Failed to validate POS Profile,فشل في التحقق من صحة ملف تعريف نقطة البيع
+No user provided,لم يتم توفير مستخدم
+User does not exist,المستخدم غير موجود
+No active POS Profile found,لم يتم العثور على ملف تعريف نقطة البيع نشط
+Failed to get active POS Profile,فشل في الحصول على ملف تعريف نقطة البيع النشط
+Failed to get user POS profiles,فشل في الحصول على ملفات تعريف نقطة البيع للمستخدم
 Replace Cheapest Item,استبدال أرخص صنف
 Replace Same Item,استبدال نفس الصنف
 Row ID,معرّف الصف

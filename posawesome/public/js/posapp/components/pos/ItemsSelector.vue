@@ -2346,7 +2346,7 @@ export default {
 		},
 		format_currency(value, currency, precision) {
 			const prec = typeof precision === "number" ? precision : this.currency_precision;
-			return this.formatCurrencyPlain(value, prec);
+			return this.formatCurrency(value, prec);
 		},
 		ratePrecision(value) {
 			const numericValue = typeof value === "string" ? parseFloat(value) : value;
@@ -2354,7 +2354,7 @@ export default {
 		},
 		format_number(value, precision) {
 			const prec = typeof precision === "number" ? precision : this.float_precision;
-			return this.formatFloatPlain(value, prec);
+			return this.formatFloat(value, prec);
 		},
 		hasDecimalPrecision(value) {
 			// Check if the value has any decimal precision when converted by exchange rate

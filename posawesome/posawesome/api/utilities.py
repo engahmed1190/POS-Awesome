@@ -11,18 +11,30 @@ import time
 import os
 import psutil
 import functools
-
+from frappe import _
 from .utils import get_item_groups
 
 
 def get_version():
+    """Get ERPNext version number."""
+    try:
+        app_version = frappe.get_attr("erpnext.__version__")
+        if app_version:
+            # Convert version string to number (e.g., "14.0.0" -> 14)
+            version_number = int(app_version.split(".")[0])
+            return version_number
+    except Exception:
+        pass
+
+    # Fallback to branch name check
     branch_name = get_app_branch("erpnext")
-    if "12" in branch_name:
-        return 12
-    elif "13" in branch_name:
-        return 13
-    else:
-        return 13
+    if branch_name:
+        for version in ["14", "13", "12"]:
+            if version in branch_name:
+                return int(version)
+
+    # Default to latest supported version
+    return 14
 
 
 def get_app_branch(app):
@@ -265,7 +277,7 @@ def get_translation_dict(lang: str) -> dict:
 @frappe.whitelist()
 def get_pos_profile_tax_inclusive(pos_profile: str):
     """Return the 'posa_tax_inclusive' setting for the given POS Profile."""
-    if not pos_profile:
+    if not pos_profile or not pos_profile.strip():
         return None
     return frappe.get_cached_value("POS Profile", pos_profile, "posa_tax_inclusive")
 
@@ -412,35 +424,21 @@ _LANGUAGE_CACHE = {
 
 # Language display names mapping (moved to module level for reuse)
 LANGUAGE_NAMES = {
-    "en": "English",
-    "ar": "العربية",
-    "es": "Español",
-    "pt": "Português",
-    "fr": "Français",
-    "de": "Deutsch",
-    "it": "Italiano",
-    "nl": "Nederlands",
-    "pl": "Polski",
-    "ru": "Русский",
-    "zh": "中文",
-    "ja": "日本語",
-    "ko": "한국어",
-    "hi": "हिन्दी",
-    "tr": "Türkçe",
-    "sv": "Svenska",
-    "da": "Dansk",
-    "no": "Norsk",
-    "fi": "Suomi",
-    "cs": "Čeština",
-    "sk": "Slovenčina",
-    "hu": "Magyar",
-    "ro": "Română",
-    "bg": "Български",
-    "hr": "Hrvatski",
-    "sl": "Slovenščina",
-    "et": "Eesti",
-    "lv": "Latviešu",
-    "lt": "Lietuvių",
+    "en": {"name": "English", "native_name": "English"},
+    "ar": {"name": "Arabic", "native_name": "العربية"},
+    "es": {"name": "Spanish", "native_name": "Español"},
+    "pt": {"name": "Portuguese", "native_name": "Português"},
+    "fr": {"name": "French", "native_name": "Français"},
+    "de": {"name": "German", "native_name": "Deutsch"},
+    "it": {"name": "Italian", "native_name": "Italiano"},
+    "nl": {"name": "Dutch", "native_name": "Nederlands"},
+    "pl": {"name": "Polish", "native_name": "Polski"},
+    "ru": {"name": "Russian", "native_name": "Русский"},
+    "zh": {"name": "Chinese", "native_name": "中文"},
+    "ja": {"name": "Japanese", "native_name": "日本語"},
+    "ko": {"name": "Korean", "native_name": "한국어"},
+    "hi": {"name": "Hindi", "native_name": "हिन्दी"},
+    "tr": {"name": "Turkish", "native_name": "Türkçe"},
 }
 
 
@@ -477,14 +475,24 @@ def get_available_languages():
                 for entry in entries:
                     if entry.is_file() and entry.name.endswith(".csv"):
                         lang_code = os.path.splitext(entry.name)[0]
-                        display_name = LANGUAGE_NAMES.get(lang_code, lang_code.upper())
-                        languages.append(
-                            {
-                                "code": lang_code,
-                                "name": display_name,
-                                "native_name": display_name,
-                            }
-                        )
+                        lang_info = LANGUAGE_NAMES.get(lang_code)
+                        if lang_info:
+                            languages.append(
+                                {
+                                    "code": lang_code,
+                                    "name": lang_info["name"],
+                                    "native_name": lang_info["native_name"],
+                                }
+                            )
+                        else:
+                            # Fallback for unknown languages
+                            languages.append(
+                                {
+                                    "code": lang_code,
+                                    "name": lang_code.upper(),
+                                    "native_name": lang_code.upper(),
+                                }
+                            )
 
         # Always include English as fallback
         if not any(lang["code"] == "en" for lang in languages):
@@ -525,7 +533,17 @@ def get_current_user_language():
                 "message": "Guest users cannot have language preferences",
             }
 
-        user_language = _get_user_language_cached(user)
+        # Get user's language preference
+        user_language = frappe.db.get_value("User", user, "language")
+        if not user_language:
+            # Try to get from system defaults
+            user_language = frappe.db.get_default("lang")
+
+        # Fallback to English
+        if not user_language:
+            user_language = "en"
+
+        # Get available languages
         available_languages = get_available_languages()
 
         # Find current language details
@@ -534,6 +552,17 @@ def get_current_user_language():
             None,
         )
 
+        # Get POS Profile settings if available
+        pos_profile = None
+        try:
+            from .utils import get_active_pos_profile
+
+            profile_data = get_active_pos_profile(user)
+            if profile_data and isinstance(profile_data, dict):
+                pos_profile = profile_data.get("name")
+        except Exception as e:
+            frappe.log_error(f"Error getting active POS Profile: {str(e)}")
+
         return {
             "success": True,
             "user": user,
@@ -541,7 +570,11 @@ def get_current_user_language():
             "language_name": (
                 current_lang["name"] if current_lang else user_language.upper()
             ),
+            "native_name": (
+                current_lang["native_name"] if current_lang else user_language.upper()
+            ),
             "available_languages": available_languages,
+            "pos_profile": pos_profile,
         }
 
     except Exception as e:
@@ -550,8 +583,26 @@ def get_current_user_language():
 
 
 @frappe.whitelist()
-def set_current_user_language(lang_code):
-    """Set language with optimized database operations."""
+def set_current_user_language(*args, **kwargs):
+    """Main function to set user language and optionally update POS Profile settings.
+    
+    Can be called with either positional or named arguments:
+    - Positional: (lang_code, pos_profile, number_system)
+    - Named: lang_code=value, pos_profile=value, number_system=value
+    """
+    # Handle both positional and named arguments
+    if args:
+        lang_code = args[0] if len(args) > 0 else None
+        pos_profile = args[1] if len(args) > 1 else None
+        number_system = args[2] if len(args) > 2 else None
+    else:
+        lang_code = kwargs.get('lang_code')
+        pos_profile = kwargs.get('pos_profile')
+        number_system = kwargs.get('number_system')
+
+    # Validate required arguments
+    if not lang_code:
+        frappe.throw("Language code is required")
     try:
         user = frappe.session.user
         if user == "Guest":
@@ -570,23 +621,65 @@ def set_current_user_language(lang_code):
                 "message": f"Language '{lang_code}' is not supported",
             }
 
-        # Batch database operations
+        # Set user language
         frappe.db.set_value("User", user, "language", lang_code, update_modified=False)
+
+        # Update POS Profile if provided
+        pos_profile_updates = {}
+        if pos_profile:
+            pos_profile_result = set_pos_profile_language_and_number_system(
+                pos_profile, language=lang_code, number_system=number_system
+            )
+            if not pos_profile_result.get("success"):
+                return pos_profile_result
+            pos_profile_updates = pos_profile_result.get("updates", {})
+
+        # Commit all changes
         frappe.db.commit()
 
-        # Clear specific caches
+        # Clear caches
         frappe.clear_cache(user=user)
         _get_user_language_cached.cache_clear()
+        if pos_profile:
+            frappe.clear_document_cache("POS Profile", pos_profile)
+            frappe.clear_cache(doctype="POS Profile")
 
         return {
             "success": True,
             "message": f"Language set to {lang_code}",
             "language": lang_code,
+            "pos_profile_updated": bool(pos_profile),
+            "pos_profile_updates": pos_profile_updates,
         }
 
     except Exception as e:
         frappe.log_error(f"Error setting language: {str(e)}")
         return {"success": False, "message": "Failed to set language"}
+
+
+def _validate_language_code(lang_code):
+    """Validate if a language code is valid and supported."""
+    if not lang_code:
+        return False, "Language code is required"
+
+    if not isinstance(lang_code, str):
+        return False, "Language code must be a string"
+
+    # Basic format validation
+    if len(lang_code) < 2 or len(lang_code) > 10:
+        return False, "Language code must be between 2 and 10 characters"
+
+    # Check if it's in available languages
+    try:
+        available_languages = get_available_languages()
+        valid_codes = [lang["code"] for lang in available_languages]
+
+        if lang_code not in valid_codes:
+            return False, f"Language '{lang_code}' is not supported"
+
+        return True, ""
+    except Exception as e:
+        return False, f"Error validating language code: {str(e)}"
 
 
 @frappe.whitelist()
@@ -626,3 +719,383 @@ def get_language_info(lang_code):
     except Exception as e:
         frappe.log_error(f"Error getting language info for {lang_code}: {str(e)}")
         return {"success": False, "message": "Failed to get language info"}
+
+
+@frappe.whitelist()
+def get_pos_profile_number_system(pos_profile: str):
+    """Return the 'posa_number_system' setting for the given POS Profile."""
+    if not pos_profile or not pos_profile.strip():
+        return None
+    return frappe.get_cached_value("POS Profile", pos_profile, "posa_number_system")
+
+
+@frappe.whitelist()
+def set_pos_profile_language_and_number_system(
+    pos_profile: str, language: str = None, number_system: str = None
+):
+    """Set both language and number system for a POS Profile."""
+    try:
+        if not pos_profile or not pos_profile.strip():
+            return {"success": False, "message": "POS Profile name is required"}
+
+        # Validate POS Profile exists
+        if not frappe.db.exists("POS Profile", pos_profile):
+            return {
+                "success": False,
+                "message": f"POS Profile '{pos_profile}' does not exist",
+            }
+
+        updates = {}
+
+        # Set language if provided
+        if language is not None:
+            available_languages = get_available_languages()
+            valid_languages = [lang["code"] for lang in available_languages]
+
+            if language not in valid_languages:
+                return {
+                    "success": False,
+                    "message": f"Language '{language}' is not supported. Available: {', '.join(valid_languages)}",
+                }
+            updates["posa_language"] = language
+
+        # Set number system if provided
+        if number_system is not None:
+            valid_number_systems = {"Western", "Arabic"}
+            # Normalize input to title case for comparison
+            normalized_number_system = number_system.title() if number_system else None
+            if normalized_number_system not in valid_number_systems:
+                return {
+                    "success": False,
+                    "message": f"Number system '{number_system}' is not supported. Available: {', '.join(valid_number_systems)}",
+                }
+            updates["posa_number_system"] = number_system
+
+        if not updates:
+            return {"success": False, "message": "No values provided to update"}
+
+        # Update the POS Profile
+        frappe.db.set_value("POS Profile", pos_profile, updates, update_modified=False)
+        frappe.db.commit()
+
+        # Clear caches
+        frappe.clear_cache(doctype="POS Profile")
+        frappe.clear_cache(doctype="POS Profile", name=pos_profile)
+
+        return {
+            "success": True,
+            "message": f"POS Profile '{pos_profile}' updated successfully",
+            "updates": updates,
+        }
+
+    except Exception as e:
+        frappe.log_error(f"Error updating POS Profile {pos_profile}: {str(e)}")
+        return {"success": False, "message": f"Failed to update POS Profile: {str(e)}"}
+
+
+@frappe.whitelist()
+def set_pos_profile_language(pos_profile: str, language: str):
+    """Set only the language for a POS Profile."""
+    return set_pos_profile_language_and_number_system(pos_profile, language=language)
+
+
+@frappe.whitelist()
+def set_pos_profile_number_system(pos_profile: str, number_system: str):
+    """Set only the number system for a POS Profile."""
+    return set_pos_profile_language_and_number_system(
+        pos_profile, number_system=number_system
+    )
+
+
+@frappe.whitelist()
+def validate_pos_profile_exists(pos_profile: str):
+    """Validate that a POS Profile exists and is accessible."""
+    try:
+        if not pos_profile or not pos_profile.strip():
+            return {"success": False, "message": "POS Profile name is required"}
+
+        # Check if POS Profile exists in database
+        if not frappe.db.exists("POS Profile", pos_profile):
+            return {
+                "success": False,
+                "message": f"POS Profile '{pos_profile}' does not exist",
+            }
+
+        # Get the profile document to check if it's disabled
+        profile_doc = frappe.get_cached_doc("POS Profile", pos_profile)
+        if profile_doc.disabled:
+            return {
+                "success": False,
+                "message": f"POS Profile '{pos_profile}' is disabled",
+            }
+
+        return {
+            "success": True,
+            "pos_profile": pos_profile,
+            "message": "POS Profile is valid",
+        }
+
+    except Exception as e:
+        frappe.log_error(f"Error validating POS Profile '{pos_profile}': {str(e)}")
+        return {
+            "success": False,
+            "message": f"Failed to validate POS Profile: {str(e)}",
+        }
+
+
+@frappe.whitelist()
+def get_pos_profile_settings(pos_profile=None):
+    """Get both language and number system settings for a POS Profile.
+
+    Args:
+        pos_profile (str, optional): The name of the POS Profile. If not provided,
+            will try to get the active profile for the current user.
+    """
+    try:
+        # If no pos_profile provided, try to get active profile
+        if not pos_profile:
+            from .utils import get_active_pos_profile
+
+            active_profile = get_active_pos_profile()
+            if not active_profile or not isinstance(active_profile, dict):
+                return {"success": False, "message": "No active POS Profile found"}
+            pos_profile = active_profile.get("name")
+            if not pos_profile:
+                return {"success": False, "message": "Active POS Profile has no name"}
+
+        # Validate the POS Profile exists
+        validation_result = validate_pos_profile_exists(pos_profile)
+        if not validation_result.get("success"):
+            return validation_result
+
+        # Get current values
+        current_language = frappe.get_cached_value(
+            "POS Profile", pos_profile, "posa_language"
+        )
+        current_number_system = frappe.get_cached_value(
+            "POS Profile", pos_profile, "posa_number_system"
+        )
+
+        # Get available options
+        available_languages = get_available_languages()
+        valid_number_systems = ["Western", "Arabic"]
+
+        # Get user's current language
+        user_language = (
+            frappe.db.get_value("User", frappe.session.user, "language") or "en"
+        )
+
+        return {
+            "success": True,
+            "pos_profile": pos_profile,
+            "current_language": current_language or user_language,
+            "current_number_system": current_number_system or "Western",
+            "available_languages": available_languages,
+            "available_number_systems": valid_number_systems,
+            "user_language": user_language,
+        }
+
+    except Exception as e:
+        frappe.log_error(
+            f"Error getting POS Profile settings for {pos_profile}: {str(e)}"
+        )
+        return {
+            "success": False,
+            "message": f"Failed to get POS Profile settings: {str(e)}",
+        }
+
+
+@frappe.whitelist()
+def get_pos_profile_language_settings(pos_profile: str):
+    """Get language settings for a POS Profile with validation."""
+    try:
+        # Validate POS Profile exists
+        validation_result = validate_pos_profile_exists(pos_profile)
+        if not validation_result.get("success"):
+            return validation_result
+
+        # Get current language setting
+        current_language = frappe.get_cached_value(
+            "POS Profile", pos_profile, "posa_language"
+        )
+
+        # Get available languages
+        available_languages = get_available_languages()
+
+        # Find current language details
+        current_lang = next(
+            (lang for lang in available_languages if lang["code"] == current_language),
+            None,
+        )
+
+        return {
+            "success": True,
+            "pos_profile": pos_profile,
+            "current_language": current_language,
+            "current_language_name": (
+                current_lang["name"] if current_lang else current_language.upper()
+            ),
+            "available_languages": available_languages,
+        }
+
+    except Exception as e:
+        frappe.log_error(
+            f"Error getting POS Profile language settings for {pos_profile}: {str(e)}"
+        )
+        return {
+            "success": False,
+            "message": f"Failed to get POS Profile language settings: {str(e)}",
+        }
+
+
+@frappe.whitelist()
+def set_language_and_number_system(lang_code, pos_profile, number_system=None):
+    """Convenience function to set both language and number system using the main set_current_user_language function."""
+    return set_current_user_language(lang_code, pos_profile, number_system)
+
+
+@frappe.whitelist()
+def check_pos_profile_status(user=None):
+    """Comprehensive check of POS Profile status for a user."""
+    try:
+        user = user or frappe.session.user
+        if not user:
+            return {"success": False, "message": "No user provided"}
+
+        # Check if user exists and is enabled
+        if not frappe.db.exists("User", user):
+            return {"success": False, "message": f"User '{user}' does not exist"}
+
+        user_enabled = frappe.get_cached_value("User", user, "enabled")
+        if not user_enabled:
+            return {"success": False, "message": f"User '{user}' is disabled"}
+
+        # Try to get active POS Profile
+        from .utils import get_active_pos_profile
+
+        active_profile = get_active_pos_profile(user)
+
+        if not active_profile:
+            return {
+                "success": False,
+                "message": "No active POS Profile found",
+                "details": {
+                    "user": user,
+                    "user_enabled": user_enabled,
+                    "has_user_specific_profile": False,
+                    "has_default_profile": False,
+                },
+            }
+
+        # Validate the profile
+        validation_result = validate_pos_profile_exists(active_profile.get("name"))
+
+        return {
+            "success": validation_result.get("success"),
+            "message": validation_result.get("message"),
+            "pos_profile": (
+                active_profile.get("name") if validation_result.get("success") else None
+            ),
+            "details": {
+                "user": user,
+                "user_enabled": user_enabled,
+                "profile_data": (
+                    active_profile if validation_result.get("success") else None
+                ),
+                "validation_result": validation_result,
+            },
+        }
+
+    except Exception as e:
+        frappe.log_error(f"Error checking POS Profile status for user {user}: {str(e)}")
+        return {
+            "success": False,
+            "message": f"Failed to check POS Profile status: {str(e)}",
+        }
+
+
+@frappe.whitelist()
+def get_user_and_pos_settings():
+    """Get current user language and POS Profile settings together."""
+    try:
+        user = frappe.session.user
+        if user == "Guest":
+            return {"success": False, "message": "Guest users cannot access settings"}
+
+        # Get user language
+        user_language = _get_user_language_cached(user)
+        available_languages = get_available_languages()
+
+        # Find current language details
+        current_lang = next(
+            (lang for lang in available_languages if lang["code"] == user_language),
+            None,
+        )
+
+        # Get POS Profile settings if user has access
+        pos_settings = None
+        try:
+            # Try to get the user's active POS Profile using the utility function
+            from .utils import get_active_pos_profile
+
+            active_profile = get_active_pos_profile(user)
+
+            # Validate that we have a valid profile with a name
+            if (
+                active_profile
+                and isinstance(active_profile, dict)
+                and active_profile.get("name")
+            ):
+                pos_profile_name = active_profile["name"]
+
+                # Additional validation: ensure the profile name is not empty
+                if pos_profile_name and pos_profile_name.strip():
+                    # Validate that the POS Profile actually exists in the database
+                    if frappe.db.exists("POS Profile", pos_profile_name):
+                        pos_settings = get_pos_profile_settings(pos_profile_name)
+                    else:
+                        frappe.log_error(
+                            f"POS Profile '{pos_profile_name}' returned by get_active_pos_profile but does not exist in database"
+                        )
+                        pos_settings = {
+                            "success": False,
+                            "message": f"POS Profile '{pos_profile_name}' not found in database",
+                        }
+                else:
+                    frappe.log_error(
+                        f"Invalid POS Profile name returned: '{pos_profile_name}'"
+                    )
+                    pos_settings = {
+                        "success": False,
+                        "message": "Invalid POS Profile name",
+                    }
+            else:
+                # No active profile found
+                pos_settings = {
+                    "success": False,
+                    "message": "No active POS Profile found for user",
+                }
+
+        except Exception as e:
+            frappe.log_error(
+                f"Error getting active POS Profile for user {user}: {str(e)}"
+            )
+            pos_settings = {
+                "success": False,
+                "message": f"Failed to get active POS Profile: {str(e)}",
+            }
+
+        return {
+            "success": True,
+            "user": user,
+            "user_language": {
+                "code": user_language,
+                "name": current_lang["name"] if current_lang else user_language.upper(),
+                "available_languages": available_languages,
+            },
+            "pos_profile_settings": pos_settings,
+        }
+
+    except Exception as e:
+        frappe.log_error(f"Error getting user and POS settings: {str(e)}")
+        return {"success": False, "message": "Failed to get settings"}

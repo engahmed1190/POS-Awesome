@@ -228,7 +228,11 @@ def get_items(
                 order_by=order_by,
             )
 
-            if not items_data and item_code_for_search and page_start == (limit_start or 0):
+            if (
+                not items_data
+                and item_code_for_search
+                and page_start == (limit_start or 0)
+            ):
                 items_data = frappe.get_all(
                     "Item",
                     filters=filters,
