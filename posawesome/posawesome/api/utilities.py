@@ -780,7 +780,7 @@ def set_pos_profile_language_and_number_system(
 
         # Clear caches
         frappe.clear_cache(doctype="POS Profile")
-        frappe.clear_cache(doctype="POS Profile", name=pos_profile)
+        frappe.clear_document_cache("POS Profile", pos_profile)
 
         return {
             "success": True,
