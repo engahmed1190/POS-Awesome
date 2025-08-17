@@ -737,7 +737,8 @@ def get_pos_profile_number_system(pos_profile: str):
     """Return the 'posa_number_system' setting for the given POS Profile."""
     if not pos_profile or not pos_profile.strip():
         return None
-    return frappe.get_cached_value("POS Profile", pos_profile, "posa_number_system")
+    value = frappe.get_cached_value("POS Profile", pos_profile, "posa_number_system")
+    return value.title() if value else None
 
 
 @frappe.whitelist()
@@ -780,7 +781,7 @@ def set_pos_profile_language_and_number_system(
                     "success": False,
                     "message": f"Number system '{number_system}' is not supported. Available: {', '.join(valid_number_systems)}",
                 }
-            updates["posa_number_system"] = number_system
+            updates["posa_number_system"] = normalized_number_system
 
         if not updates:
             return {"success": False, "message": "No values provided to update"}
@@ -887,6 +888,8 @@ def get_pos_profile_settings(pos_profile=None):
         current_number_system = frappe.get_cached_value(
             "POS Profile", pos_profile, "posa_number_system"
         )
+        if current_number_system:
+            current_number_system = current_number_system.title()
 
         # Get available options
         available_languages = get_available_languages()
