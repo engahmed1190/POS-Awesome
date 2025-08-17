@@ -483,7 +483,7 @@ export default {
 					console.log('Clearing user cache...');
 					try {
 						await frappe.call({
-							method: 'frappe.core.doctype.user.user.clear_cache'
+							method: 'posawesome.posawesome.api.utilities.clear_user_cache'
 						});
 						console.log('Cache cleared successfully');
 					} catch (cacheError) {

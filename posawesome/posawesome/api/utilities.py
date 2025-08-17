@@ -143,6 +143,17 @@ def get_company_domain(company):
 
 
 @frappe.whitelist()
+def clear_user_cache():
+    """Clear the cache for the current user."""
+    try:
+        user = frappe.session.user
+        frappe.clear_cache(user=user)
+        return {"success": True, "message": "User cache cleared successfully"}
+    except Exception as e:
+        frappe.log_error(f"Error clearing user cache: {str(e)}")
+        return {"success": False, "message": "Failed to clear user cache"}
+
+@frappe.whitelist()
 def get_selling_price_lists():
     """Return all selling price lists"""
     return frappe.get_all(
@@ -638,7 +649,7 @@ def set_current_user_language(*args, **kwargs):
         frappe.db.commit()
 
         # Clear caches
-        frappe.clear_cache(user=user)
+        clear_user_cache()  # Use our new function to clear user cache
         _get_user_language_cached.cache_clear()
         if pos_profile:
             frappe.clear_document_cache("POS Profile", pos_profile)
@@ -779,6 +790,7 @@ def set_pos_profile_language_and_number_system(
         frappe.db.commit()
 
         # Clear caches
+        clear_user_cache()  # Clear user cache first
         frappe.clear_cache(doctype="POS Profile")
         frappe.clear_document_cache("POS Profile", pos_profile)
 

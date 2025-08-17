@@ -137,18 +137,32 @@ const formatUtils = {
 	// Synchronous version for backward compatibility
 	shouldUseArabicNumeralsSync() {
 		try {
-			// Fallback to direct POS Profile access for synchronous operations
-			const currentLang = window.pos_profile?.posa_language || window.frappe?.boot?.user?.language || 'en';
-			const numberFormat = window.pos_profile?.posa_number_system;
-
-			if (!currentLang || !numberFormat) {
-				return false;
+			// First try to get language from current user settings
+			let currentLang = null;
+			
+			// Try to get from API response if available
+			if (window.frappe?.boot?.lang) {
+				currentLang = window.frappe.boot.lang;
+			} else if (window.frappe?.boot?.user?.language) {
+				currentLang = window.frappe.boot.user.language;
+			} else if (window.pos_profile?.posa_language) {
+				currentLang = window.pos_profile.posa_language;
+			} else {
+				currentLang = 'en';
 			}
 
-			const isArabicLanguage = currentLang.startsWith('ar');
-			const isArabicFormat = (numberFormat || '').toLowerCase() === 'arabic';
+			// For Arabic language, check number format
+			if (currentLang?.startsWith('ar')) {
+				// First check POS Profile setting if available
+				if (window.pos_profile?.posa_number_system) {
+					return window.pos_profile.posa_number_system.toLowerCase() === 'arabic';
+				}
+				
+				// If no POS Profile, default to Arabic numerals for Arabic language
+				return true;
+			}
 
-			return isArabicLanguage && isArabicFormat;
+			return false;
 		} catch (error) {
 			console.warn("Error in sync Arabic numerals check:", error);
 			return false;
@@ -192,10 +206,16 @@ const formatUtils = {
 
 	// Add cache clearing method
 	clearCache() {
-		// Clear any cached values if needed
-		this._cachedNumberFormat = null;
-		this._cachedLanguage = null;
-		this._cachedArabicNumerals = null;
+		// Clear all cached values
+		this._cache.currentLanguage = null;
+		this._cache.numberFormat = null;
+		this._cache.lastChecked = null;
+		this._cache.currencySymbols = {};
+		
+		// Force re-initialization of number format
+		this._initNumberFormat().catch(error => {
+			console.warn("Error reinitializing number format:", error);
+		});
 	}
 };
 

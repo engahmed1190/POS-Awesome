@@ -72,7 +72,10 @@ async function clearClientCache() {
  */
 async function clearServerCache() {
     try {
-        // Clear Frappe server cache without args
+        // Clear user cache first
+        await frappe.call('posawesome.posawesome.api.utilities.clear_user_cache');
+        
+        // Clear general server cache
         await frappe.call('frappe.sessions.clear');
 
         // Clear POS-specific caches
