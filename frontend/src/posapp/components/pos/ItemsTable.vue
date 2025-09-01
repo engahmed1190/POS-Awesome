@@ -60,14 +60,42 @@
 
 			<!-- Quantity column -->
 			<template v-slot:item.qty="{ item }">
-				<div class="amount-value" :class="{ 'negative-number': isNegative(item.qty) }">
-					{{ formatFloat(item.qty, hide_qty_decimals ? 0 : undefined) }}
+				<div class="qty-counter-container" :class="{ 'rtl-layout': isRTL }" :title="`RTL: ${isRTL}`">
+					<v-btn
+						:disabled="!!item.posa_is_replace"
+						size="small"
+						color="warning"
+						variant="tonal"
+						class="qty-control-btn minus-btn"
+						@click.stop="handleMinusClick(item)"
+					>
+						<v-icon size="small">mdi-minus</v-icon>
+					</v-btn>
+					<div class="qty-display amount-value" :class="{ 'negative-number': isNegative(item.qty) }">
+						{{ formatFloat(item.qty, hide_qty_decimals ? 0 : undefined) }}
+					</div>
+					<v-btn
+						:disabled="
+							!!item.posa_is_replace ||
+							((!stock_settings.allow_negative_stock ||
+								pos_profile.posa_block_sale_beyond_available_qty) &&
+								item.max_qty !== undefined &&
+								item.qty >= item.max_qty)
+						"
+						size="small"
+						color="success"
+						variant="tonal"
+						class="qty-control-btn plus-btn"
+						@click.stop="addOne(item)"
+					>
+						<v-icon size="small">mdi-plus</v-icon>
+					</v-btn>
 				</div>
 			</template>
 
 			<!-- Rate column -->
 			<template v-slot:item.rate="{ item }">
-				<div class="currency-display">
+				<div class="currency-display right-aligned">
 					<span class="currency-symbol">{{ currencySymbol(displayCurrency) }}</span>
 					<span class="amount-value" :class="{ 'negative-number': isNegative(item.rate) }">{{
 						formatCurrency(item.rate)
@@ -77,7 +105,7 @@
 
 			<!-- Amount column -->
 			<template v-slot:item.amount="{ item }">
-				<div class="currency-display">
+				<div class="currency-display right-aligned">
 					<span class="currency-symbol">{{ currencySymbol(displayCurrency) }}</span>
 					<span
 						class="amount-value"
@@ -89,7 +117,7 @@
 
 			<!-- Discount percentage column -->
 			<template v-slot:item.discount_value="{ item }">
-				<div class="amount-value">
+				<div class="amount-value right-aligned">
 					{{
 						formatFloat(
 							item.discount_percentage ||
@@ -103,7 +131,7 @@
 
 			<!-- Discount amount column -->
 			<template v-slot:item.discount_amount="{ item }">
-				<div class="currency-display">
+				<div class="currency-display right-aligned">
 					<span class="currency-symbol">{{ currencySymbol(displayCurrency) }}</span>
 					<span
 						class="amount-value"
@@ -115,7 +143,7 @@
 
 			<!-- Price list rate column -->
 			<template v-slot:item.price_list_rate="{ item }">
-				<div class="currency-display">
+				<div class="currency-display right-aligned">
 					<span class="currency-symbol">{{ currencySymbol(displayCurrency) }}</span>
 					<span
 						class="amount-value"
@@ -133,6 +161,21 @@
 					@change="toggleOffer(item)"
 				></v-checkbox-btn>
 			</template>
+
+			<!-- Actions column -->
+			<template v-slot:item.actions="{ item }">
+				<v-btn
+					:disabled="!!item.posa_is_replace"
+					size="default"
+					color="error"
+					variant="tonal"
+					class="delete-action-btn"
+					@click.stop="removeItem(item)"
+				>
+					<v-icon size="small">mdi-delete-outline</v-icon>
+				</v-btn>
+			</template>
+
 
 			<!-- Expanded row content using Vuetify's built-in system -->
 			<template v-slot:expanded-row="{ item }">
@@ -239,9 +282,7 @@
 											:model-value="
 												formatFloat(item.qty, hide_qty_decimals ? 0 : undefined)
 											"
-											@change="
-												setFormatedQty(item, 'qty', null, false, $event.target.value)
-											"
+											@change="handleQtyChange(item, $event)"
 											:rules="[isNumber]"
 											:disabled="!!item.posa_is_replace"
 											prepend-inner-icon="mdi-numeric"
@@ -740,6 +781,28 @@ export default {
 			}
 			return false;
 		},
+		isRTL() {
+			// Multiple RTL detection methods
+			const htmlDir = document.documentElement.getAttribute('dir');
+			const bodyDir = document.body.getAttribute('dir');
+			const computedDir = window.getComputedStyle(document.documentElement).direction;
+			const lang = document.documentElement.getAttribute('lang') || navigator.language;
+			
+			// Check if current language is RTL
+			const rtlLanguages = ['ar', 'he', 'fa', 'ur', 'yi'];
+			const isRTLLanguage = rtlLanguages.some(rtlLang => lang.startsWith(rtlLang));
+			
+			console.log('RTL Detection:', {
+				htmlDir,
+				bodyDir,
+				computedDir,
+				lang,
+				isRTLLanguage,
+				result: htmlDir === 'rtl' || bodyDir === 'rtl' || computedDir === 'rtl' || isRTLLanguage
+			});
+			
+			return htmlDir === 'rtl' || bodyDir === 'rtl' || computedDir === 'rtl' || isRTLLanguage;
+		},
 	},
 	methods: {
 		onDragOverFromSelector(event) {
@@ -825,6 +888,25 @@ export default {
 				this.editedName = item.item_name;
 			}
 		},
+		handleQtyChange(item, event) {
+			const newQty = parseFloat(event.target.value) || 0;
+			if (newQty === 0) {
+				// Remove the item when quantity is set to 0
+				this.removeItem(item);
+			} else {
+				// Use the existing setFormatedQty function for non-zero values
+				this.setFormatedQty(item, 'qty', null, false, event.target.value);
+			}
+		},
+		handleMinusClick(item) {
+			if (item.qty <= 1) {
+				// Remove the item when quantity would become 0 or less
+				this.removeItem(item);
+			} else {
+				// Use the existing subtractOne function
+				this.subtractOne(item);
+			}
+		},
 	},
 };
 </script>
@@ -859,10 +941,10 @@ export default {
 /* Table header styling */
 .modern-items-table :deep(th) {
 	font-weight: 600;
-	font-size: 0.9rem;
+	font-size: 0.8rem;
 	text-transform: uppercase;
-	letter-spacing: 0.5px;
-	padding: 12px 16px;
+	letter-spacing: 0.3px;
+	padding: 8px 12px;
 	transition: background-color var(--transition-normal);
 	border-bottom: 2px solid var(--table-header-border);
 	background-color: var(--table-header-bg, var(--surface-secondary, #f5f5f5));
@@ -870,6 +952,39 @@ export default {
 	position: sticky;
 	top: 0;
 	z-index: 1;
+	/* Handle long header text */
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 150px;
+	min-width: 80px;
+	position: relative;
+}
+
+/* Header text wrapper for better control */
+.modern-items-table :deep(th .v-data-table-header__content) {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 100%;
+	display: block;
+}
+
+/* Tooltip for truncated headers on hover */
+.modern-items-table :deep(th:hover) {
+	overflow: visible;
+	z-index: 10;
+}
+
+.modern-items-table :deep(th:hover .v-data-table-header__content) {
+	white-space: normal;
+	word-break: break-word;
+	background: var(--table-header-bg, var(--surface-secondary, #f5f5f5));
+	padding: 4px 8px;
+	border-radius: 4px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+	position: relative;
+	z-index: 11;
 }
 
 /* Table row styling */
@@ -886,8 +1001,9 @@ export default {
 
 /* Table cell styling */
 .modern-items-table :deep(td) {
-	padding: 12px 16px;
+	padding: 16px 16px;
 	vertical-align: middle;
+	height: 60px;
 }
 
 /* Expanded content styling */
@@ -1196,6 +1312,30 @@ export default {
 	.section-title {
 		font-size: 0.8rem;
 	}
+
+	/* Responsive header adjustments for smaller screens */
+	.modern-items-table :deep(th) {
+		font-size: 0.7rem;
+		padding: 6px 8px;
+		max-width: 120px;
+		min-width: 60px;
+	}
+
+	.modern-items-table :deep(th[data-column-key="item_name"]) {
+		min-width: 150px;
+		max-width: 180px;
+	}
+
+	.modern-items-table :deep(th[data-column-key="qty"]) {
+		min-width: 120px;
+		max-width: 140px;
+	}
+
+	.modern-items-table :deep(th[data-column-key="rate"]),
+	.modern-items-table :deep(th[data-column-key="amount"]) {
+		min-width: 80px;
+		max-width: 100px;
+	}
 }
 
 /* Change price button styling */
@@ -1231,6 +1371,28 @@ export default {
 	display: flex;
 	align-items: center;
 	justify-content: flex-start;
+}
+
+.currency-display.right-aligned {
+	justify-content: flex-end;
+}
+
+.amount-value.right-aligned {
+	text-align: right;
+}
+
+/* RTL support for currency displays */
+[dir="rtl"] .currency-display.right-aligned {
+	justify-content: flex-start;
+}
+
+[dir="rtl"] .amount-value.right-aligned {
+	text-align: left;
+}
+
+[dir="rtl"] .currency-symbol {
+	margin-left: 2px;
+	margin-right: 0;
 }
 
 .currency-symbol {
@@ -1310,6 +1472,81 @@ export default {
 	-moz-osx-font-smoothing: grayscale;
 }
 
+/* Column width constraints and alignment */
+.modern-items-table :deep(th[data-column-key="item_name"]),
+.modern-items-table :deep(td[data-column-key="item_name"]) {
+	min-width: 200px;
+	max-width: 250px;
+	text-align: left;
+}
+
+.modern-items-table :deep(th[data-column-key="qty"]),
+.modern-items-table :deep(td[data-column-key="qty"]) {
+	min-width: 140px;
+	max-width: 160px;
+	text-align: center;
+}
+
+.modern-items-table :deep(th[data-column-key="uom"]),
+.modern-items-table :deep(td[data-column-key="uom"]) {
+	min-width: 80px;
+	max-width: 100px;
+	text-align: center;
+}
+
+.modern-items-table :deep(th[data-column-key="rate"]),
+.modern-items-table :deep(td[data-column-key="rate"]),
+.modern-items-table :deep(th[data-column-key="amount"]),
+.modern-items-table :deep(td[data-column-key="amount"]),
+.modern-items-table :deep(th[data-column-key="price_list_rate"]),
+.modern-items-table :deep(td[data-column-key="price_list_rate"]) {
+	min-width: 100px;
+	max-width: 130px;
+	text-align: right;
+}
+
+.modern-items-table :deep(th[data-column-key="discount_value"]),
+.modern-items-table :deep(td[data-column-key="discount_value"]),
+.modern-items-table :deep(th[data-column-key="discount_amount"]),
+.modern-items-table :deep(td[data-column-key="discount_amount"]) {
+	min-width: 90px;
+	max-width: 120px;
+	text-align: right;
+}
+
+.modern-items-table :deep(th[data-column-key="posa_is_offer"]),
+.modern-items-table :deep(td[data-column-key="posa_is_offer"]) {
+	min-width: 70px;
+	max-width: 90px;
+	text-align: center;
+}
+
+.modern-items-table :deep(th[data-column-key="actions"]),
+.modern-items-table :deep(td[data-column-key="actions"]) {
+	min-width: 80px;
+	max-width: 100px;
+	text-align: center;
+}
+
+/* RTL support for table columns */
+[dir="rtl"] .modern-items-table :deep(th[data-column-key="item_name"]),
+[dir="rtl"] .modern-items-table :deep(td[data-column-key="item_name"]) {
+	text-align: right;
+}
+
+[dir="rtl"] .modern-items-table :deep(th[data-column-key="rate"]),
+[dir="rtl"] .modern-items-table :deep(td[data-column-key="rate"]),
+[dir="rtl"] .modern-items-table :deep(th[data-column-key="amount"]),
+[dir="rtl"] .modern-items-table :deep(td[data-column-key="amount"]),
+[dir="rtl"] .modern-items-table :deep(th[data-column-key="price_list_rate"]),
+[dir="rtl"] .modern-items-table :deep(td[data-column-key="price_list_rate"]),
+[dir="rtl"] .modern-items-table :deep(th[data-column-key="discount_value"]),
+[dir="rtl"] .modern-items-table :deep(td[data-column-key="discount_value"]),
+[dir="rtl"] .modern-items-table :deep(th[data-column-key="discount_amount"]),
+[dir="rtl"] .modern-items-table :deep(td[data-column-key="discount_amount"]) {
+	text-align: left;
+}
+
 /* Drag and drop styles */
 .draggable-row {
 	transition: all 0.2s ease;
@@ -1376,4 +1613,143 @@ export default {
 .expanded-row {
 	background-color: var(--surface-secondary);
 }
+
+/* QTY Counter Styling */
+.qty-control-btn {
+	width: 32px !important;
+	height: 32px !important;
+	min-width: 32px !important;
+	border-radius: 8px !important;
+	transition: all 0.2s ease !important;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12) !important;
+	font-weight: 600 !important;
+}
+
+.qty-counter-container {
+	display: grid;
+	grid-template-columns: 32px 1fr 32px;
+	grid-template-rows: 1fr;
+	align-items: center;
+	justify-items: center;
+	gap: 8px;
+	padding: 4px;
+	min-width: 130px;
+	width: 130px;
+	height: 40px;
+}
+
+/* Default LTR: minus=1, qty=2, plus=3 */
+.qty-counter-container .minus-btn {
+	grid-column: 1;
+	grid-row: 1;
+}
+
+.qty-counter-container .qty-display {
+	grid-column: 2;
+	grid-row: 1;
+}
+
+.qty-counter-container .plus-btn {
+	grid-column: 3;
+	grid-row: 1;
+}
+
+/* RTL: plus=1, qty=2, minus=3 */
+.qty-counter-container.rtl-layout .minus-btn {
+	grid-column: 3;
+	grid-row: 1;
+}
+
+.qty-counter-container.rtl-layout .plus-btn {
+	grid-column: 1;
+	grid-row: 1;
+}
+
+/* Keep numbers LTR for readability */
+[dir="rtl"] .qty-display {
+	direction: ltr;
+}
+
+.qty-display {
+	min-width: 40px;
+	text-align: center;
+	font-weight: 600;
+	padding: 4px 8px;
+	border-radius: 4px;
+	background: rgba(0, 0, 0, 0.02);
+	border: 1px solid rgba(0, 0, 0, 0.08);
+	font-family:
+		"SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma",
+		sans-serif;
+	font-variant-numeric: lining-nums tabular-nums;
+	font-feature-settings:
+		"tnum" 1,
+		"lnum" 1,
+		"kern" 1;
+}
+
+:deep([data-theme="dark"]) .qty-display,
+:deep(.v-theme--dark) .qty-display {
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.qty-control-btn:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.16) !important;
+}
+
+.qty-control-btn.minus-btn {
+	background: linear-gradient(145deg, #fff3e0, #ffe0b2) !important;
+	color: #ef6c00 !important;
+}
+
+.qty-control-btn.plus-btn {
+	background: linear-gradient(145deg, #e8f5e9, #c8e6c9) !important;
+	color: #2e7d32 !important;
+}
+
+
+:deep([data-theme="dark"]) .qty-control-btn.minus-btn,
+:deep(.v-theme--dark) .qty-control-btn.minus-btn {
+	background: linear-gradient(145deg, #4a3c10, #3a2e0c) !important;
+	color: #ffb74d !important;
+}
+
+:deep([data-theme="dark"]) .qty-control-btn.plus-btn,
+:deep(.v-theme--dark) .qty-control-btn.plus-btn {
+	background: linear-gradient(145deg, #1b4620, #133419) !important;
+	color: #81c784 !important;
+}
+
+
+/* Delete action button styling */
+.delete-action-btn {
+	min-width: 40px !important;
+	height: 40px !important;
+	border-radius: 10px !important;
+	transition: all 0.2s ease !important;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
+	font-weight: 600 !important;
+	background: linear-gradient(145deg, #ffebee, #ffcdd2) !important;
+	color: #d32f2f !important;
+}
+
+.delete-action-btn:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.16) !important;
+	background: linear-gradient(145deg, #ffcdd2, #ef9a9a) !important;
+}
+
+:deep([data-theme="dark"]) .delete-action-btn,
+:deep(.v-theme--dark) .delete-action-btn {
+	background: linear-gradient(145deg, #4a1515, #3a1010) !important;
+	color: #ff8a80 !important;
+}
+
+:deep([data-theme="dark"]) .delete-action-btn:hover,
+:deep(.v-theme--dark) .delete-action-btn:hover {
+	background: linear-gradient(145deg, #5a1a1a, #4a1515) !important;
+}
+
 </style>
