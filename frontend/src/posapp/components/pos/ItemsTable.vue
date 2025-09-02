@@ -71,7 +71,7 @@
 					>
 						<v-icon size="small">mdi-minus</v-icon>
 					</v-btn>
-					<div class="qty-display amount-value" :class="{ 'negative-number': isNegative(item.qty) }">
+					<div class="qty-display amount-value number-field-rtl" :class="{ 'negative-number': isNegative(item.qty) }">
 						{{ formatFloat(item.qty, hide_qty_decimals ? 0 : undefined) }}
 					</div>
 					<v-btn
@@ -1364,6 +1364,18 @@ body[dir="rtl"] .section-header {
 	text-align: right !important;
 }
 
+/* RTL section icon positioning - place icon on the right side */
+[dir="rtl"] .section-icon,
+[lang^="ar"] .section-icon,
+[lang^="he"] .section-icon,
+[lang^="fa"] .section-icon,
+html[dir="rtl"] .section-icon,
+body[dir="rtl"] .section-icon {
+	order: 2 !important;
+	margin-left: 0 !important;
+	margin-right: 12px !important;
+}
+
 [dir="rtl"] .section-header::after,
 [lang^="ar"] .section-header::after,
 [lang^="he"] .section-header::after,
@@ -1382,6 +1394,10 @@ body[dir="rtl"] .section-header::after {
 html[dir="rtl"] .section-title,
 body[dir="rtl"] .section-title {
 	text-align: right !important;
+	direction: rtl !important;
+	width: 100% !important;
+	display: block !important;
+	order: 1 !important;
 }
 
 /* RTL form fields - Enhanced selectors */
@@ -2164,6 +2180,18 @@ html[dir="rtl"] .qty-display,
 body[dir="rtl"] .qty-display {
 	direction: ltr !important;
 	text-align: center;
+}
+
+/* Enhanced RTL support for number fields without currency - prevents shifting */
+[dir="rtl"] .number-field-rtl,
+[lang^="ar"] .number-field-rtl,
+[lang^="he"] .number-field-rtl,
+[lang^="fa"] .number-field-rtl,
+html[dir="rtl"] .number-field-rtl,
+body[dir="rtl"] .number-field-rtl {
+	direction: ltr !important;
+	text-align: center !important;
+	unicode-bidi: embed !important;
 }
 
 .qty-display {
