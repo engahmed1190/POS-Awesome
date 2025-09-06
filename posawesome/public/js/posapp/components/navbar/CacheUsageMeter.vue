@@ -16,7 +16,7 @@
 			</template>
 			<div class="cache-tooltip-content">
 				<div class="cache-tooltip-title">
-					<v-icon size="14" color="info" class="mr-1">mdi-database-clock</v-icon>
+                                        <v-icon size="14" color="info" class="me-1">mdi-database-clock</v-icon>
 					{{ __("Cache Usage") }}
 				</div>
 				<v-divider class="my-2" />
@@ -35,15 +35,15 @@
 				<div v-if="!cacheUsageLoading">
 					<div class="cache-tooltip-section-title mb-1">{{ __("Breakdown") }}</div>
 					<div class="cache-tooltip-detail">
-						<v-icon size="14" color="info" class="mr-1">mdi-database-clock</v-icon
+                                                <v-icon size="14" color="info" class="me-1">mdi-database-clock</v-icon
 						>{{ __("Total Size") }}: <b>{{ formatBytes(cacheUsageDetails.total) }}</b>
 					</div>
 					<div class="cache-tooltip-detail">
-						<v-icon size="14" color="info" class="mr-1">mdi-database</v-icon
+                                                <v-icon size="14" color="info" class="me-1">mdi-database</v-icon
 						>{{ __("IndexedDB") }}: <b>{{ formatBytes(cacheUsageDetails.indexedDB) }}</b>
 					</div>
 					<div class="cache-tooltip-detail">
-						<v-icon size="14" color="info" class="mr-1">mdi-folder</v-icon
+                                                <v-icon size="14" color="info" class="me-1">mdi-folder</v-icon
 						>{{ __("localStorage") }}: <b>{{ formatBytes(cacheUsageDetails.localStorage) }}</b>
 					</div>
 				</div>
@@ -52,19 +52,19 @@
 				</div>
 				<v-divider class="my-2" />
 				<div v-if="cacheUsage >= 80" class="cache-tooltip-warning">
-					<v-icon size="14" color="error" class="mr-1">mdi-alert</v-icon>
+                                        <v-icon size="14" color="error" class="me-1">mdi-alert</v-icon>
 					{{ __("Warning: High cache usage may affect performance.") }}
 				</div>
 				<div class="cache-tooltip-tip mt-2">
-					<v-icon size="14" color="primary" class="mr-1">mdi-lightbulb-on-outline</v-icon>
+                                        <v-icon size="14" color="primary" class="me-1">mdi-lightbulb-on-outline</v-icon>
 					{{ __("Tip: Clear cache regularly to free up space and keep the app fast.") }}
 				</div>
 				<div class="cache-tooltip-explanation mt-2">
-					<v-icon size="14" color="info" class="mr-1">mdi-database-clock</v-icon>
+                                        <v-icon size="14" color="info" class="me-1">mdi-database-clock</v-icon>
 					{{ __("The app stores data locally for offline use. This is called cache.") }}
 				</div>
 				<div class="cache-tooltip-action mt-2">
-					<v-icon size="14" class="mr-1">mdi-refresh</v-icon>
+                                        <v-icon size="14" class="me-1">mdi-refresh</v-icon>
 					{{ __("Click to refresh") }}
 				</div>
 			</div>
@@ -188,7 +188,7 @@ export default {
 	background: #e3f2fd;
 	border-radius: 4px;
 	overflow: hidden;
-	margin-right: 6px;
+        margin-inline-end: 6px;
 }
 .cache-bar-fill {
 	height: 100%;
