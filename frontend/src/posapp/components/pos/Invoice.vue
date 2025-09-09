@@ -1432,6 +1432,14 @@ export default {
 	.dynamic-padding .v-col {
 		padding: 2px 4px;
 	}
+
+	.items-table-wrapper {
+		/* Adjust for smaller padding on tablets */
+		margin-left: calc(-1 * var(--dynamic-xs));
+		margin-right: calc(-1 * var(--dynamic-xs));
+		width: calc(100% + 2 * var(--dynamic-xs));
+		max-width: calc(100% + 2 * var(--dynamic-xs));
+	}
 }
 
 @media (max-width: 480px) {
@@ -1445,6 +1453,14 @@ export default {
 
 	.dynamic-padding .v-col {
 		padding: 1px 2px;
+	}
+
+	.items-table-wrapper {
+		/* Adjust for smallest screens */
+		margin-left: calc(-1 * var(--dynamic-xs));
+		margin-right: calc(-1 * var(--dynamic-xs));
+		width: calc(100% + 2 * var(--dynamic-xs));
+		max-width: calc(100% + 2 * var(--dynamic-xs));
 	}
 }
 
@@ -1472,6 +1488,12 @@ export default {
 .items-table-wrapper {
 	position: relative;
 	margin-top: var(--dynamic-xl);
+	/* Override parent padding to make table full-width */
+	margin-left: calc(-1 * var(--dynamic-sm));
+	margin-right: calc(-1 * var(--dynamic-sm));
+	width: calc(100% + 2 * var(--dynamic-sm));
+	max-width: calc(100% + 2 * var(--dynamic-sm));
+	box-sizing: border-box;
 }
 
 /* New styles for improved column switches */

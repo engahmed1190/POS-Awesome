@@ -1,26 +1,29 @@
 <template>
 	<div
-		class="my-0 py-0 overflow-y-auto items-table-container"
-		:style="{ height: 'calc(100% - 80px)', maxHeight: 'calc(100% - 80px)' }"
+		ref="tableContainer"
+		class="my-0 py-0 overflow-y-auto items-table-container responsive-table-container"
+		:style="containerStyles"
+		:class="containerClasses"
 		@dragover="onDragOverFromSelector($event)"
 		@drop="onDropFromSelector($event)"
 		@dragenter="onDragEnterFromSelector"
 		@dragleave="onDragLeaveFromSelector"
 	>
 		<v-data-table-virtual
-			:headers="headers"
+			:headers="responsiveHeaders"
 			:items="items"
 			:theme="$theme.current"
 			:expanded="expanded"
 			show-expand
 			item-value="posa_row_id"
 			class="modern-items-table elevation-2"
+			:class="tableClasses"
 			:items-per-page="itemsPerPage"
 			expand-on-click
-			density="compact"
+			:density="tableDensity"
 			hide-default-footer
 			:single-expand="true"
-			:header-props="headerProps"
+			:header-props="dynamicHeaderProps"
 			:no-data-text="__('No items in cart')"
 			@update:expanded="
 				(val) =>
@@ -71,7 +74,15 @@
 					>
 						<v-icon size="small">mdi-minus</v-icon>
 					</v-btn>
-					<div class="qty-display amount-value number-field-rtl" :class="{ 'negative-number': isNegative(item.qty) }">
+					<div 
+						class="qty-display amount-value number-field-rtl" 
+						:class="{ 
+							'negative-number': isNegative(item.qty),
+							'large-number': getQtyDisplayLength(item.qty) > 6 
+						}"
+						:data-length="getQtyDisplayLength(item.qty)"
+						:title="formatFloat(item.qty, hide_qty_decimals ? 0 : undefined)"
+					>
 						{{ formatFloat(item.qty, hide_qty_decimals ? 0 : undefined) }}
 					</div>
 					<v-btn
@@ -179,8 +190,8 @@
 
 			<!-- Expanded row content using Vuetify's built-in system -->
 			<template v-slot:expanded-row="{ item }">
-				<td :colspan="headers.length" class="ma-0 pa-0 expanded-row-cell">
-					<div class="expanded-content responsive-expanded-content">
+				<td :colspan="responsiveHeaders.length + 1" class="ma-0 pa-0 expanded-row-cell">
+					<div class="expanded-content responsive-expanded-content" :class="expandedContentClasses">
 						<!-- Item Details Form -->
 						<div class="item-details-form">
 							<!-- Basic Information Section -->
@@ -694,11 +705,98 @@ export default {
 			editNameDialog: false,
 			editNameTarget: null,
 			editedName: "",
+			// Container awareness properties
+			containerWidth: 0,
+			containerHeight: 0,
+			resizeObserver: null,
+			breakpoint: 'xl',
+			columnVisibility: new Map(),
 		};
 	},
 	computed: {
+		// Dynamic container styles based on parent
+		containerStyles() {
+			return {
+				height: 'calc(100% - 80px)',
+				maxHeight: 'calc(100% - 80px)',
+				'--container-width': this.containerWidth + 'px',
+				'--container-height': this.containerHeight + 'px',
+			};
+		},
+		
+		containerClasses() {
+			return {
+				[`breakpoint-${this.breakpoint}`]: true,
+				'compact-view': this.containerWidth < 600,
+				'medium-view': this.containerWidth >= 600 && this.containerWidth < 900,
+				'large-view': this.containerWidth >= 900,
+				'expanded-active': this.expanded.length > 0,
+			};
+		},
+		
+		tableClasses() {
+			return {
+				[`container-${this.breakpoint}`]: true,
+				'responsive-table': true,
+			};
+		},
+		
+		expandedContentClasses() {
+			return {
+				[`expanded-${this.breakpoint}`]: true,
+				'compact-expanded': this.containerWidth < 600,
+			};
+		},
+		
+		// Responsive headers based on container size
+		responsiveHeaders() {
+			if (!this.headers || this.headers.length === 0) return [];
+			
+			return this.headers.filter(header => {
+				// Always show required columns
+				if (header.required || header.key === 'item_name' || header.key === 'qty' || header.key === 'actions') {
+					return true;
+				}
+				
+				// Hide columns based on container width
+				if (this.containerWidth < 500) {
+					// Ultra-compact: only essential columns
+					return ['item_name', 'qty', 'amount', 'actions'].includes(header.key);
+				} else if (this.containerWidth < 700) {
+					// Compact: essential + rate
+					return ['item_name', 'qty', 'rate', 'amount', 'actions'].includes(header.key);
+				} else if (this.containerWidth < 900) {
+					// Medium: hide advanced columns
+					return !['discount_value', 'price_list_rate'].includes(header.key);
+				}
+				
+				// Large: show all columns
+				return true;
+			}).map(header => ({
+				...header,
+				width: this.calculateColumnWidth(header),
+				minWidth: this.calculateMinColumnWidth(header),
+			}));
+		},
+		
+		// Dynamic table density based on container size
+		tableDensity() {
+			if (this.containerWidth < 500) return 'compact';
+			if (this.containerWidth < 800) return 'default';
+			return 'comfortable';
+		},
+		
 		headerProps() {
 			return this.isDarkTheme ? { style: "background-color:#121212;color:#fff" } : {};
+		},
+		
+		// Enhanced header props with responsive behavior
+		dynamicHeaderProps() {
+			const baseProps = this.headerProps;
+			return {
+				...baseProps,
+				class: `responsive-header container-${this.breakpoint}`,
+			};
 		},
 		isDarkTheme() {
 			return this.$theme.current === "dark";
@@ -739,6 +837,99 @@ export default {
 		},
 	},
 	methods: {
+		// Container awareness methods
+		updateContainerDimensions() {
+			if (this.$refs.tableContainer) {
+				const rect = this.$refs.tableContainer.getBoundingClientRect();
+				this.containerWidth = rect.width;
+				this.containerHeight = rect.height;
+				this.updateBreakpoint();
+			}
+		},
+		
+		updateBreakpoint() {
+			if (this.containerWidth < 500) {
+				this.breakpoint = 'xs';
+			} else if (this.containerWidth < 700) {
+				this.breakpoint = 'sm';
+			} else if (this.containerWidth < 900) {
+				this.breakpoint = 'md';
+			} else if (this.containerWidth < 1200) {
+				this.breakpoint = 'lg';
+			} else {
+				this.breakpoint = 'xl';
+			}
+		},
+		
+		calculateColumnWidth(header) {
+			const baseWidths = {
+				item_name: { min: 150, max: 250, ratio: 0.3 },
+				qty: { min: 120, max: 160, ratio: 0.15 },
+				rate: { min: 100, max: 130, ratio: 0.12 },
+				amount: { min: 100, max: 130, ratio: 0.12 },
+				discount_value: { min: 80, max: 110, ratio: 0.1 },
+				discount_amount: { min: 90, max: 120, ratio: 0.11 },
+				price_list_rate: { min: 110, max: 140, ratio: 0.13 },
+				actions: { min: 80, max: 100, ratio: 0.08 },
+				posa_is_offer: { min: 60, max: 80, ratio: 0.06 },
+			};
+			
+			const config = baseWidths[header.key] || { min: 80, max: 120, ratio: 0.1 };
+			const calculatedWidth = this.containerWidth * config.ratio;
+			
+			return Math.max(config.min, Math.min(config.max, calculatedWidth));
+		},
+		
+		calculateMinColumnWidth(header) {
+			const minWidths = {
+				item_name: 120,
+				qty: 100,
+				rate: 80,
+				amount: 80,
+				discount_value: 70,
+				discount_amount: 80,
+				price_list_rate: 90,
+				actions: 60,
+				posa_is_offer: 50,
+			};
+			
+			return minWidths[header.key] || 60;
+		},
+		
+		setupResizeObserver() {
+			if (typeof ResizeObserver !== 'undefined') {
+				this.resizeObserver = new ResizeObserver((entries) => {
+					for (let entry of entries) {
+						const { width, height } = entry.contentRect;
+						this.containerWidth = width;
+						this.containerHeight = height;
+						this.updateBreakpoint();
+						// Emit resize event for parent components
+						this.$emit('container-resize', { width, height, breakpoint: this.breakpoint });
+					}
+				});
+				
+				this.$nextTick(() => {
+					if (this.$refs.tableContainer) {
+						this.resizeObserver.observe(this.$refs.tableContainer);
+						this.updateContainerDimensions(); // Initial measurement
+					}
+				});
+			} else {
+				// Fallback to window resize for older browsers
+				window.addEventListener('resize', this.updateContainerDimensions);
+			}
+		},
+		
+		cleanupResizeObserver() {
+			if (this.resizeObserver) {
+				this.resizeObserver.disconnect();
+				this.resizeObserver = null;
+			} else {
+				window.removeEventListener('resize', this.updateContainerDimensions);
+			}
+		},
+		
 		onDragOverFromSelector(event) {
 			// Check if drag data is from item selector
 			const dragData = event.dataTransfer.types.includes("application/json");
@@ -841,6 +1032,24 @@ export default {
 				this.subtractOne(item);
 			}
 		},
+		
+		getQtyDisplayLength(qty) {
+			// Calculate the display length of the formatted quantity
+			const formattedQty = this.formatFloat(qty, this.hide_qty_decimals ? 0 : undefined);
+			return String(formattedQty).length;
+		},
+	},
+	
+	mounted() {
+		this.setupResizeObserver();
+		// Initial dimension update
+		this.$nextTick(() => {
+			this.updateContainerDimensions();
+		});
+	},
+	
+	beforeUnmount() {
+		this.cleanupResizeObserver();
 	},
 };
 </script>
@@ -853,10 +1062,14 @@ export default {
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 	border: 1px solid rgba(0, 0, 0, 0.1);
 	height: 100%;
+	width: 100%;
+	max-width: 100%;
 	display: flex;
 	flex-direction: column;
 	transition: all 0.3s ease;
 	background: #ffffff;
+	margin: 0;
+	padding: 0;
 }
 
 :deep([data-theme="dark"]) .modern-items-table,
@@ -869,31 +1082,40 @@ export default {
 /* Ensure items table can scroll when many rows exist */
 .items-table-container {
 	overflow-y: auto;
+	width: 100%;
+	max-width: 100%;
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
 }
 
 /* Table wrapper styling */
 .modern-items-table :deep(.v-data-table__wrapper),
 .modern-items-table :deep(.v-table__wrapper) {
-	border-radius: var(--border-radius-sm);
+	border-radius: 0;
 	height: 100%;
+	width: 100%;
+	max-width: 100%;
 	overflow-y: auto;
 	scrollbar-width: thin;
+	margin: 0;
+	padding: 0;
+	border: none;
 }
 
-/* Table header styling */
+/* Enhanced table header styling with stable hover support */
 .modern-items-table :deep(th) {
 	font-weight: 600;
 	font-size: 0.8rem;
 	text-transform: uppercase;
 	letter-spacing: 0.3px;
 	padding: 12px;
-	transition: background-color 0.2s ease;
 	border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 	background-color: #f8f9fa;
 	color: #495057;
 	position: sticky;
 	top: 0;
-	z-index: 1;
+	z-index: 3;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -903,6 +1125,16 @@ export default {
 	vertical-align: middle !important;
 	line-height: 1.2 !important;
 	height: 40px;
+	/* Enhanced transitions and stability */
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	background-clip: padding-box;
+	border-radius: 0;
+	user-select: none;
+	cursor: default;
+	will-change: background-color, transform, box-shadow;
+	border: none;
+	outline: none;
+	box-sizing: border-box;
 }
 
 :deep([data-theme="dark"]) .modern-items-table :deep(th),
@@ -912,30 +1144,50 @@ export default {
 	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Header text wrapper for better control */
+/* Header text wrapper is now handled in the improved stable section above */
+
+/* Improved stable header hover effects */
+.modern-items-table :deep(th) {
+	/* Ensure stable positioning */
+	position: relative;
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	background-clip: padding-box;
+	will-change: background-color, transform;
+}
+
+.modern-items-table :deep(th:hover) {
+	/* Smooth background transition without layout changes */
+	background-color: rgba(25, 118, 210, 0.08);
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(25, 118, 210, 0.15);
+	z-index: 2;
+}
+
 .modern-items-table :deep(th .v-data-table-header__content) {
+	/* Stable content container */
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+	width: 100%;
+	padding: 0;
+	margin: 0;
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	position: relative;
+	z-index: 1;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	max-width: 100%;
-	display: block;
-}
-
-/* Tooltip for truncated headers on hover */
-.modern-items-table :deep(th:hover) {
-	overflow: visible;
-	z-index: 10;
+	box-sizing: border-box;
 }
 
 .modern-items-table :deep(th:hover .v-data-table-header__content) {
-	white-space: normal;
-	word-break: break-word;
-	background: var(--table-header-bg, var(--surface-secondary, #f5f5f5));
-	padding: 4px 8px;
-	border-radius: 4px;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-	position: relative;
-	z-index: 11;
+	/* Enhanced text on hover without disrupting layout */
+	color: rgba(25, 118, 210, 0.9);
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	text-shadow: 0 1px 2px rgba(25, 118, 210, 0.1);
 }
 
 /* Table row styling */
@@ -985,17 +1237,22 @@ export default {
    EXPANDED CONTENT - CLEAN STRUCTURE
    ================================================================= */
 
-/* Base expanded row styling */
+/* Base expanded row styling - ensure full width utilization */
 .expanded-row-cell {
 	padding: 0 !important;
-	width: 100%;
+	width: 100% !important;
+	max-width: 100% !important;
 	overflow: hidden;
+	box-sizing: border-box;
+	/* Ensure it spans the full table width including expand column */
+	position: relative;
 }
 
 /* Main expanded content container */
 .expanded-content {
 	padding: 24px;
-	width: 100%;
+	width: 100% !important;
+	max-width: 100% !important;
 	box-sizing: border-box;
 	background: #f8f9fa;
 	border-radius: 0 0 8px 8px;
@@ -1006,6 +1263,11 @@ export default {
 	/* Enable container queries */
 	container-type: inline-size;
 	container-name: expanded-content;
+	
+	/* Ensure full width utilization */
+	margin: 0;
+	position: relative;
+	overflow: visible;
 }
 
 /* Dark theme */
@@ -1463,11 +1725,289 @@ body[dir="rtl"] .expanded-content .qty-display {
 	direction: ltr !important; /* Keep numbers readable */
 }
 
+/* =================================================================
+   CONTAINER-AWARE RESPONSIVE STYLES
+   ================================================================= */
+
+/* Base responsive container styles */
+.responsive-table-container {
+	position: relative;
+	transition: all 0.3s ease;
+	width: 100%;
+	max-width: 100%;
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+/* Breakpoint-specific container classes */
+.responsive-table-container.breakpoint-xs {
+	--table-padding: 8px;
+	--header-font-size: 0.65rem;
+	--cell-padding: 8px 4px;
+	--cell-height: 48px;
+}
+
+.responsive-table-container.breakpoint-sm {
+	--table-padding: 12px;
+	--header-font-size: 0.7rem;
+	--cell-padding: 12px 6px;
+	--cell-height: 52px;
+}
+
+.responsive-table-container.breakpoint-md {
+	--table-padding: 16px;
+	--header-font-size: 0.75rem;
+	--cell-padding: 14px 8px;
+	--cell-height: 56px;
+}
+
+.responsive-table-container.breakpoint-lg {
+	--table-padding: 16px;
+	--header-font-size: 0.8rem;
+	--cell-padding: 16px 12px;
+	--cell-height: 60px;
+}
+
+.responsive-table-container.breakpoint-xl {
+	--table-padding: 20px;
+	--header-font-size: 0.85rem;
+	--cell-padding: 18px 12px;
+	--cell-height: 64px;
+}
+
+/* Dynamic table styling based on container size */
+.modern-items-table.responsive-table {
+	width: 100%;
+	height: 100%;
+	max-width: 100%;
+	overflow: hidden;
+	margin: 0 !important;
+	padding: 0 !important;
+	border-left: none;
+	border-right: none;
+	border-radius: 0;
+}
+
+/* Container-aware headers */
+.modern-items-table.container-xs :deep(th) {
+	font-size: var(--header-font-size);
+	padding: 8px 4px;
+	min-width: 60px;
+	max-width: 120px;
+}
+
+.modern-items-table.container-sm :deep(th) {
+	font-size: var(--header-font-size);
+	padding: 10px 6px;
+	min-width: 70px;
+	max-width: 140px;
+}
+
+.modern-items-table.container-md :deep(th) {
+	font-size: var(--header-font-size);
+	padding: 12px 8px;
+	min-width: 80px;
+	max-width: 160px;
+}
+
+.modern-items-table.container-lg :deep(th) {
+	font-size: var(--header-font-size);
+	padding: var(--cell-padding);
+	min-width: 90px;
+	max-width: 180px;
+}
+
+.modern-items-table.container-xl :deep(th) {
+	font-size: var(--header-font-size);
+	padding: var(--cell-padding);
+	min-width: 100px;
+	max-width: 200px;
+}
+
+/* Container-aware cells */
+.modern-items-table.container-xs :deep(td),
+.modern-items-table.container-sm :deep(td),
+.modern-items-table.container-md :deep(td),
+.modern-items-table.container-lg :deep(td),
+.modern-items-table.container-xl :deep(td) {
+	padding: var(--cell-padding);
+	height: var(--cell-height);
+	vertical-align: middle;
+}
+
+/* Compact view adjustments */
+.responsive-table-container.compact-view .modern-items-table {
+	border-radius: 0;
+	margin: 0;
+	padding: 0;
+	width: 100%;
+	max-width: 100%;
+}
+
+.responsive-table-container.compact-view .qty-counter-container {
+	min-width: 110px;
+	max-width: 140px;
+	width: auto;
+	gap: 4px;
+}
+
+.responsive-table-container.compact-view .qty-control-btn {
+	width: 28px !important;
+	height: 28px !important;
+	min-width: 28px !important;
+}
+
+.responsive-table-container.compact-view .qty-display {
+	min-width: 35px;
+	max-width: 65px;
+	height: 28px;
+	font-size: 0.7rem;
+	padding: 4px 3px;
+	letter-spacing: -0.03em;
+}
+
+/* Medium view adjustments */
+.responsive-table-container.medium-view .qty-counter-container {
+	min-width: 130px;
+	max-width: 160px;
+	width: auto;
+}
+
+/* Large view adjustments */
+.responsive-table-container.large-view .qty-counter-container {
+	min-width: 140px;
+	max-width: 180px;
+	width: auto;
+}
+
+/* Enhanced expanded content responsiveness */
+.expanded-content.expanded-xs {
+	padding: 12px;
+	border-radius: 0 0 6px 6px;
+}
+
+.expanded-content.expanded-sm {
+	padding: 16px;
+	border-radius: 0 0 8px 8px;
+}
+
+.expanded-content.expanded-md {
+	padding: 20px;
+	border-radius: 0 0 10px 10px;
+}
+
+.expanded-content.expanded-lg {
+	padding: 24px;
+	border-radius: 0 0 12px 12px;
+}
+
+.expanded-content.expanded-xl {
+	padding: 28px;
+	border-radius: 0 0 12px 12px;
+}
+
+/* Compact expanded content */
+.expanded-content.compact-expanded .form-section {
+	padding: 16px 12px;
+	margin-bottom: 12px;
+	border-radius: 8px;
+}
+
+.expanded-content.compact-expanded .form-row {
+	flex-direction: column;
+	gap: 8px;
+}
+
+.expanded-content.compact-expanded .form-field {
+	min-width: 100%;
+}
+
+.expanded-content.compact-expanded .section-header {
+	margin-bottom: 12px;
+	padding-bottom: 8px;
+}
+
+.expanded-content.compact-expanded .section-title {
+	font-size: 0.8rem;
+}
+
+/* Full width enforcement for all nested elements */
+.modern-items-table :deep(.v-data-table),
+.modern-items-table :deep(.v-data-table-virtual),
+.modern-items-table :deep(.v-table) {
+	width: 100% !important;
+	max-width: 100% !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	border-radius: 0 !important;
+}
+
+.modern-items-table :deep(.v-data-table__wrapper) {
+	width: 100% !important;
+	max-width: 100% !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	border: none !important;
+}
+
+.modern-items-table :deep(table) {
+	width: 100% !important;
+	max-width: 100% !important;
+	margin: 0 !important;
+	border-collapse: collapse !important;
+	table-layout: auto !important;
+}
+
+.modern-items-table :deep(thead),
+.modern-items-table :deep(tbody) {
+	width: 100% !important;
+	max-width: 100% !important;
+}
+
+.modern-items-table :deep(tr) {
+	width: 100% !important;
+	max-width: 100% !important;
+	margin: 0 !important;
+	padding: 0 !important;
+}
+
+/* Remove any card or container margins around the table */
+.items-table-wrapper,
+.items-table-wrapper :deep(.v-card),
+.items-table-wrapper :deep(.v-sheet) {
+	width: 100% !important;
+	max-width: 100% !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	border-radius: 0 !important;
+}
+
+/* Performance optimizations */
+.responsive-table-container {
+	will-change: width, height;
+	contain: layout style;
+}
+
+.modern-items-table.responsive-table {
+	will-change: transform;
+	contain: layout;
+}
+
+/* Smooth transitions during resize */
+.modern-items-table :deep(th),
+.modern-items-table :deep(td) {
+	transition: padding 0.2s ease, font-size 0.2s ease, width 0.2s ease;
+}
+
 /* Enhanced responsive design */
 @media (max-width: 768px) {
 	.modern-items-table {
-		border-radius: 12px;
-		margin: 0 4px;
+		border-radius: 0;
+		margin: 0;
+		padding: 0;
+		width: 100%;
+		max-width: 100%;
 	}
 
 	.modern-items-table :deep(th) {
@@ -1529,8 +2069,11 @@ body[dir="rtl"] .expanded-content .qty-display {
 	}
 	
 	.modern-items-table {
-		border-radius: 8px;
-		margin: 0 2px;
+		border-radius: 0;
+		margin: 0;
+		padding: 0;
+		width: 100%;
+		max-width: 100%;
 		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 	}
 
@@ -1580,10 +2123,12 @@ body[dir="rtl"] .expanded-content .qty-display {
 	}
 
 	.qty-display {
-		min-width: 32px;
-		padding: 4px 6px;
-		font-size: 0.8rem;
+		min-width: 35px;
+		max-width: 70px;
+		padding: 4px 3px;
+		font-size: 0.75rem;
 		height: 28px;
+		letter-spacing: -0.03em;
 	}
 
 	.action-button-group {
@@ -1903,10 +2448,321 @@ body[dir="rtl"] .amount-value.right-aligned {
 	border-right: 1px solid rgba(25, 118, 210, 0.1);
 }
 
-/* Enhanced header hover effects */
-.modern-items-table :deep(th:hover) {
-	background-color: rgba(25, 118, 210, 0.05);
-	transition: background-color 0.2s ease;
+/* Advanced header tooltip for truncated text */
+.modern-items-table :deep(th.has-tooltip) {
+	position: relative;
+}
+
+.modern-items-table :deep(th.has-tooltip::after) {
+	content: attr(data-tooltip);
+	position: absolute;
+	bottom: -45px;
+	left: 50%;
+	transform: translateX(-50%);
+	background: rgba(33, 33, 33, 0.95);
+	color: white;
+	padding: 8px 12px;
+	border-radius: 6px;
+	font-size: 0.75rem;
+	font-weight: 400;
+	text-transform: none;
+	letter-spacing: normal;
+	white-space: nowrap;
+	z-index: 100;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+	pointer-events: none;
+	opacity: 0;
+	visibility: hidden;
+	transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
+	transform: translateX(-50%) translateY(-5px);
+	max-width: 200px;
+	word-wrap: break-word;
+	text-align: center;
+	line-height: 1.3;
+}
+
+.modern-items-table :deep(th.has-tooltip::before) {
+	content: '';
+	position: absolute;
+	bottom: -8px;
+	left: 50%;
+	transform: translateX(-50%);
+	width: 0;
+	height: 0;
+	border-left: 6px solid transparent;
+	border-right: 6px solid transparent;
+	border-bottom: 6px solid rgba(33, 33, 33, 0.95);
+	z-index: 101;
+	opacity: 0;
+	visibility: hidden;
+	transition: opacity 0.3s ease, visibility 0.3s ease;
+	pointer-events: none;
+}
+
+.modern-items-table :deep(th.has-tooltip:hover::after) {
+	opacity: 1;
+	visibility: visible;
+	transform: translateX(-50%) translateY(0);
+	transition-delay: 0.5s;
+}
+
+.modern-items-table :deep(th.has-tooltip:hover::before) {
+	opacity: 1;
+	visibility: visible;
+	transition-delay: 0.5s;
+}
+
+/* Dark theme support for header hover and tooltips */
+:deep([data-theme="dark"]) .modern-items-table :deep(th),
+:deep(.v-theme--dark) .modern-items-table :deep(th) {
+	background-color: #2d3748;
+	color: #e2e8f0;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+:deep([data-theme="dark"]) .modern-items-table :deep(th:hover),
+:deep(.v-theme--dark) .modern-items-table :deep(th:hover) {
+	background-color: rgba(144, 202, 249, 0.15);
+	box-shadow: 0 4px 12px rgba(144, 202, 249, 0.25);
+}
+
+:deep([data-theme="dark"]) .modern-items-table :deep(th:hover .v-data-table-header__content),
+:deep(.v-theme--dark) .modern-items-table :deep(th:hover .v-data-table-header__content) {
+	color: rgba(144, 202, 249, 0.95);
+	text-shadow: 0 1px 2px rgba(144, 202, 249, 0.15);
+}
+
+:deep([data-theme="dark"]) .modern-items-table :deep(th.has-tooltip::after),
+:deep(.v-theme--dark) .modern-items-table :deep(th.has-tooltip::after) {
+	background: rgba(15, 15, 15, 0.95);
+	color: #e2e8f0;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+}
+
+:deep([data-theme="dark"]) .modern-items-table :deep(th.has-tooltip::before),
+:deep(.v-theme--dark) .modern-items-table :deep(th.has-tooltip::before) {
+	border-bottom-color: rgba(15, 15, 15, 0.95);
+}
+
+/* Additional header stability and interaction improvements */
+.modern-items-table :deep(th:active) {
+	transform: translateY(0px);
+	transition: transform 0.1s ease;
+}
+
+.modern-items-table :deep(th:focus) {
+	outline: 2px solid rgba(25, 118, 210, 0.3);
+	outline-offset: -2px;
+}
+
+:deep([data-theme="dark"]) .modern-items-table :deep(th:focus),
+:deep(.v-theme--dark) .modern-items-table :deep(th:focus) {
+	outline-color: rgba(144, 202, 249, 0.4);
+}
+
+/* Prevent text selection and improve cursor feedback */
+.modern-items-table :deep(th),
+.modern-items-table :deep(th *) {
+	user-select: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+}
+
+/* Smooth transition for all header properties to prevent jitter */
+.modern-items-table :deep(th),
+.modern-items-table :deep(th .v-data-table-header__content),
+.modern-items-table :deep(th .v-icon) {
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	backface-visibility: hidden;
+	-webkit-backface-visibility: hidden;
+	transform: translate3d(0, 0, 0);
+	-webkit-transform: translate3d(0, 0, 0);
+}
+
+/* Prevent layout shift during hover */
+.modern-items-table :deep(th) {
+	contain: layout style;
+}
+
+/* Enhanced header border for better visual stability */
+.modern-items-table :deep(th) {
+	border-right: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.modern-items-table :deep(th:last-child) {
+	border-right: none;
+}
+
+:deep([data-theme="dark"]) .modern-items-table :deep(th),
+:deep(.v-theme--dark) .modern-items-table :deep(th) {
+	border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+:deep([data-theme="dark"]) .modern-items-table :deep(th:last-child),
+:deep(.v-theme--dark) .modern-items-table :deep(th:last-child) {
+	border-right: none;
+}
+
+/* =================================================================
+   ELIMINATE UNWANTED VUETIFY TABLE SPACERS AND EMPTY ROWS
+   ================================================================= */
+
+/* Hide empty placeholder/spacer rows generated by Vuetify */
+.modern-items-table :deep(tr[style*="height: 0px"]),
+.modern-items-table :deep(tr[style*="height:0px"]) {
+	display: none !important;
+	height: 0 !important;
+	line-height: 0 !important;
+	padding: 0 !important;
+	margin: 0 !important;
+	border: none !important;
+}
+
+/* Hide empty cells within spacer rows */
+.modern-items-table :deep(tr[style*="height: 0px"] td),
+.modern-items-table :deep(tr[style*="height:0px"] td),
+.modern-items-table :deep(td[style*="height: 0px"]),
+.modern-items-table :deep(td[style*="height:0px"]) {
+	display: none !important;
+	height: 0 !important;
+	line-height: 0 !important;
+	padding: 0 !important;
+	margin: 0 !important;
+	border: none !important;
+}
+
+/* Additional targeting for Vuetify virtual table placeholders */
+.modern-items-table :deep(.v-data-table__tr--placeholder),
+.modern-items-table :deep(.v-table__tr--placeholder) {
+	display: none !important;
+}
+
+/* Hide any empty rows with zero or minimal height */
+.modern-items-table :deep(tr) {
+	min-height: var(--cell-height, 60px);
+}
+
+.modern-items-table :deep(tr:empty),
+.modern-items-table :deep(tr[style*="height: 0"]),
+.modern-items-table :deep(tr[style*="height:0"]) {
+	display: none !important;
+	visibility: hidden !important;
+	opacity: 0 !important;
+	height: 0 !important;
+	line-height: 0 !important;
+}
+
+/* Ensure table rows have consistent spacing */
+.modern-items-table :deep(tbody tr:not([style*="height: 0"])) {
+	height: var(--cell-height, 60px);
+	min-height: var(--cell-height, 60px);
+}
+
+/* Clean up any unwanted spacing from virtual scrolling */
+.modern-items-table :deep(.v-virtual-scroll__item[style*="height: 0"]),
+.modern-items-table :deep(.v-virtual-scroll__spacer[style*="height: 0"]) {
+	display: none !important;
+}
+
+/* Force table to have clean spacing */
+.modern-items-table :deep(table) {
+	border-spacing: 0;
+	border-collapse: collapse;
+}
+
+/* Ensure tbody has no unwanted spacing */
+.modern-items-table :deep(tbody) {
+	border-spacing: 0;
+}
+
+/* Hide any Vuetify generated dividers or spacers */
+.modern-items-table :deep(.v-divider),
+.modern-items-table :deep(.v-spacer) {
+	display: none !important;
+}
+
+/* Additional cleanup for v-data-table-virtual specific elements */
+.modern-items-table :deep(.v-data-table-virtual__spacer) {
+	display: none !important;
+	height: 0 !important;
+}
+
+/* Hide empty measurement/calculation rows */
+.modern-items-table :deep(tr[data-test-id]),
+.modern-items-table :deep(tr[data-testid]),
+.modern-items-table :deep(tr[class*="measurement"]),
+.modern-items-table :deep(tr[class*="placeholder"]) {
+	display: none !important;
+}
+
+/* Ensure no phantom spacing around table body */
+.modern-items-table :deep(tbody) {
+	vertical-align: top;
+	border-top: none;
+	border-bottom: none;
+	margin: 0;
+	padding: 0;
+}
+
+/* Clean up any row group spacing */
+.modern-items-table :deep(tbody tr) {
+	vertical-align: middle;
+}
+
+/* Remove any default table spacing that might create gaps */
+.modern-items-table :deep(table),
+.modern-items-table :deep(tbody),
+.modern-items-table :deep(thead) {
+	border-collapse: collapse;
+	border-spacing: 0;
+	margin: 0;
+	padding: 0;
+}
+
+/* Ensure expanded rows don't create unwanted spacing */
+.modern-items-table :deep(tr.v-data-table__expanded) {
+	border: none;
+}
+
+/* Clean slate for table structure */
+.modern-items-table :deep(*) {
+	box-sizing: border-box;
+}
+
+/* Force removal of any invisible/zero-height elements that might cause spacing */
+.modern-items-table :deep([style*="display: none"]),
+.modern-items-table :deep([style*="visibility: hidden"]),
+.modern-items-table :deep([style*="opacity: 0"]) {
+	display: none !important;
+	height: 0 !important;
+	margin: 0 !important;
+	padding: 0 !important;
+}
+
+/* Enhanced expanded row width utilization */
+.modern-items-table :deep(tr.v-data-table__expanded__content) {
+	width: 100% !important;
+}
+
+.modern-items-table :deep(tr.v-data-table__expanded__content td) {
+	width: 100% !important;
+	max-width: 100% !important;
+	padding: 0 !important;
+	margin: 0 !important;
+}
+
+/* Ensure expanded rows don't have unwanted borders */
+.modern-items-table :deep(.v-data-table__expanded__content) {
+	border: none !important;
+	background: transparent !important;
+}
+
+/* Fix for Vuetify expanded row positioning */
+.modern-items-table :deep(.v-data-table__expanded__content .expanded-row-cell) {
+	width: 100% !important;
+	border: none !important;
+	background: transparent !important;
 }
 
 .modern-items-table :deep(th[data-column-key="discount_value"]),
@@ -2092,10 +2948,12 @@ body[dir="rtl"] .amount-value.right-aligned {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	gap: 8px;
+	gap: 6px;
 	padding: 4px;
+	/* More flexible sizing for larger numbers */
 	min-width: 130px;
-	width: 130px;
+	max-width: 180px;
+	width: auto;
 	height: auto;
 	background: rgba(255, 255, 255, 0.6);
 	border-radius: 12px;
@@ -2103,6 +2961,9 @@ body[dir="rtl"] .amount-value.right-aligned {
 	border: 1px solid rgba(0, 0, 0, 0.04);
 	transition: all 0.3s ease;
 	margin: 0 auto;
+	/* Allow container to grow with content */
+	flex-shrink: 0;
+	box-sizing: border-box;
 }
 
 .qty-counter-container:hover {
@@ -2195,10 +3056,14 @@ body[dir="rtl"] .number-field-rtl {
 }
 
 .qty-display {
-	min-width: 40px;
+	/* Dynamic width based on content with proper constraints */
+	min-width: 50px;
+	max-width: 100px;
+	width: auto;
+	flex: 1 1 auto;
 	text-align: center;
 	font-weight: 600;
-	padding: 6px 8px;
+	padding: 6px 4px;
 	border-radius: 6px;
 	background: linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(59, 130, 246, 0.08) 100%);
 	border: 1px solid rgba(37, 99, 235, 0.1);
@@ -2211,20 +3076,82 @@ body[dir="rtl"] .number-field-rtl {
 		"lnum" 1,
 		"kern" 1;
 	color: #1e40af;
-	font-size: 0.85rem;
+	font-size: 0.8rem;
 	transition: all 0.2s ease;
 	box-shadow: 0 1px 3px rgba(37, 99, 235, 0.08);
-	flex: 1;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	height: 32px;
+	/* Handle overflow gracefully */
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	/* Better number display */
+	letter-spacing: -0.02em;
+	word-spacing: -0.1em;
 }
 
 :deep([data-theme="dark"]) .qty-display,
 :deep(.v-theme--dark) .qty-display {
 	background: rgba(255, 255, 255, 0.05);
 	border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* Special handling for very large numbers */
+.qty-display.large-number {
+	min-width: 70px;
+	max-width: 120px;
+	font-size: 0.75rem;
+	padding: 6px 3px;
+	letter-spacing: -0.04em;
+}
+
+/* Special handling for negative numbers */
+.qty-display.negative-number {
+	color: #dc2626;
+	background: linear-gradient(135deg, rgba(220, 38, 38, 0.05) 0%, rgba(239, 68, 68, 0.08) 100%);
+	border-color: rgba(220, 38, 38, 0.15);
+}
+
+:deep([data-theme="dark"]) .qty-display.negative-number,
+:deep(.v-theme--dark) .qty-display.negative-number {
+	color: #ff8a80;
+	background: rgba(255, 138, 128, 0.1);
+	border-color: rgba(255, 138, 128, 0.2);
+}
+
+/* Dynamic container expansion for larger numbers */
+.qty-counter-container:has(.large-number) {
+	min-width: 150px;
+	max-width: 200px;
+}
+
+/* Responsive text sizing based on number length */
+.qty-display[data-length="1"],
+.qty-display[data-length="2"] {
+	font-size: 0.85rem;
+	min-width: 40px;
+}
+
+.qty-display[data-length="3"],
+.qty-display[data-length="4"] {
+	font-size: 0.8rem;
+	min-width: 50px;
+}
+
+.qty-display[data-length="5"],
+.qty-display[data-length="6"] {
+	font-size: 0.75rem;
+	min-width: 60px;
+}
+
+.qty-display[data-length="7"],
+.qty-display[data-length="8"],
+.qty-display[data-length="9"] {
+	font-size: 0.7rem;
+	min-width: 70px;
+	max-width: 100px;
 }
 
 .qty-control-btn:hover {
