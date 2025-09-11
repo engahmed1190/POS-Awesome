@@ -159,13 +159,30 @@
 				</div>
 			</template>
 
-			<!-- Offer checkbox column -->
+			<!-- Offer toggle button column -->
 			<template v-slot:item.posa_is_offer="{ item }">
-				<v-checkbox-btn
-					v-model="item.posa_is_offer"
-					class="center"
-					@change="toggleOffer(item)"
-				></v-checkbox-btn>
+				<v-btn
+					size="x-small"
+					color="primary"
+					variant="tonal"
+					class="ma-0 pa-0"
+					@click.stop="toggleOffer(item)"
+				>
+					{{ item.posa_offer_applied ? __("Remove Offer") : __("Apply Offer") }}
+				</v-btn>
+			</template>
+
+			<!-- Actions column -->
+			<template v-slot:item.actions="{ item }">
+				<v-btn
+					:disabled="!!item.posa_is_replace"
+					size="small"
+					variant="flat"
+					class="pos-table__delete-btn"
+					@click.stop="removeItem(item)"
+				>
+					<v-icon size="small">mdi-delete-outline</v-icon>
+				</v-btn>
 			</template>
 
 			<!-- Actions column -->
@@ -356,7 +373,7 @@
 											:label="frappe._('Price List Rate')"
 											class="pos-themed-input"
 											hide-details
-											:model-value="formatCurrency(item.price_list_rate || 0)"
+											:model-value="formatCurrency(item.price_list_rate ?? 0)"
 											:disabled="!pos_profile.posa_allow_price_list_rate_change"
 											prepend-inner-icon="mdi-format-list-numbered"
 											:prefix="currencySymbol(pos_profile.currency)"
