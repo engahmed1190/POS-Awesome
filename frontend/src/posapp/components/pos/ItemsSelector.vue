@@ -490,6 +490,7 @@ import {
 import { useResponsive } from "../../composables/useResponsive.js";
 import { useRtl } from "../../composables/useRtl.js";
 import { useFlyAnimation } from "../../composables/useFlyAnimation.js";
+import { useCartValidation } from "../../composables/useCartValidation.js";
 import placeholderImage from "./placeholder-image.png";
 import Skeleton from "../ui/Skeleton.vue";
 
@@ -499,7 +500,8 @@ export default {
 		const responsive = useResponsive();
 		const rtl = useRtl();
 		const { fly } = useFlyAnimation();
-		return { ...responsive, ...rtl, fly };
+		const cartValidation = useCartValidation();
+		return { ...responsive, ...rtl, fly, cartValidation };
 	},
 	components: {
 		CameraScanner,
@@ -1782,84 +1784,111 @@ export default {
 		},
 		async add_item(item) {
 			item = { ...item };
+
+			// Handle variant items
 			if (item.has_variants) {
-				let variants = this.items.filter((it) => it.variant_of == item.item_code);
-				let attrsMeta = {};
-				if (!variants.length) {
-					try {
-						const res = await frappe.call({
-							method: "posawesome.posawesome.api.items.get_item_variants",
-							args: {
-								pos_profile: JSON.stringify(this.pos_profile),
-								parent_item_code: item.item_code,
-								price_list: this.active_price_list,
-								customer: this.customer,
-							},
-						});
-						if (res.message) {
-							variants = res.message.variants || res.message;
-							attrsMeta = res.message.attributes_meta || {};
-							this.items.push(...variants);
-						}
-					} catch (e) {
-						console.error("Failed to fetch variants", e);
-					}
-				}
-				this.eventBus.emit("show_message", {
-					title: __("This is an item template. Please choose a variant."),
-					color: "warning",
-				});
-				console.log("sending profile", this.pos_profile);
-				// Ensure attributes meta is always an object
-				attrsMeta = attrsMeta || {};
-				this.eventBus.emit("open_variants_model", item, variants, this.pos_profile, attrsMeta);
-			} else {
-				if (item.actual_qty === 0 && this.pos_profile.posa_display_items_in_stock) {
-					this.eventBus.emit("show_message", {
-						title: `No stock available for ${item.item_name}`,
-						color: "warning",
+				await this.handleVariantItem(item);
+				return;
+			}
+
+			// Validate item before adding to cart
+			const requestedQty = this.qty != null ? Math.abs(this.qty) : 1;
+			const isValid = await this.cartValidation.validateCartItem(
+				item,
+				requestedQty,
+				this.pos_profile,
+				this.stock_settings,
+				this.eventBus,
+				this.pos_profile?.posa_block_sale_beyond_available_qty
+			);
+
+			if (!isValid) {
+				// Validation failed, error message already shown by validator
+				return;
+			}
+
+			// Prepare item for cart
+			await this.prepareItemForCart(item, requestedQty);
+
+			// Add item to cart
+			const payload = { ...item };
+			delete payload._barcode_qty;
+			this.eventBus.emit("add_item", payload);
+			this.qty = 1;
+		},
+
+		/**
+		 * Handle variant item selection
+		 */
+		async handleVariantItem(item) {
+			let variants = this.items.filter((it) => it.variant_of == item.item_code);
+			let attrsMeta = {};
+
+			// Fetch variants if not already loaded
+			if (!variants.length) {
+				try {
+					const res = await frappe.call({
+						method: "posawesome.posawesome.api.items.get_item_variants",
+						args: {
+							pos_profile: JSON.stringify(this.pos_profile),
+							parent_item_code: item.item_code,
+							price_list: this.active_price_list,
+							customer: this.customer,
+						},
 					});
-					await this.update_items_details([item]);
-					return;
+					if (res.message) {
+						variants = res.message.variants || res.message;
+						attrsMeta = res.message.attributes_meta || {};
+						this.items.push(...variants);
+					}
+				} catch (e) {
+					console.error("Failed to fetch variants", e);
 				}
+			}
 
-				// Ensure UOMs are initialized before adding the item
+			// Show variant selection dialog
+			this.eventBus.emit("show_message", {
+				title: __("This is an item template. Please choose a variant."),
+				color: "warning",
+			});
+
+			attrsMeta = attrsMeta || {};
+			this.eventBus.emit("open_variants_model", item, variants, this.pos_profile, attrsMeta);
+		},
+
+		/**
+		 * Prepare item for adding to cart (UOMs, currency conversion, etc.)
+		 */
+		async prepareItemForCart(item, requestedQty) {
+			// Ensure UOMs are initialized
+			if (!item.item_uoms || item.item_uoms.length === 0) {
+				await this.update_items_details([item]);
+
 				if (!item.item_uoms || item.item_uoms.length === 0) {
-					// If UOMs are not available, fetch them first
-					await this.update_items_details([item]);
-
-					// Add stock UOM as fallback
-					if (!item.item_uoms || item.item_uoms.length === 0) {
-						item.item_uoms = [{ uom: item.stock_uom, conversion_factor: 1.0 }];
-					}
+					item.item_uoms = [{ uom: item.stock_uom, conversion_factor: 1.0 }];
 				}
+			}
 
-				// Ensure correct rate based on selected currency
-				if (this.pos_profile.posa_allow_multi_currency) {
-					this.applyCurrencyConversionToItem(item);
+			// Handle multi-currency conversion
+			if (this.pos_profile.posa_allow_multi_currency) {
+				this.applyCurrencyConversionToItem(item);
 
-					// Compute base rates from original values
-					const base_rate =
-						item.original_currency === this.pos_profile.currency
-							? item.original_rate
-							: item.original_rate * (item.plc_conversion_rate || this.exchange_rate);
-					item.base_rate = base_rate;
-					item.base_price_list_rate = base_rate;
+				const base_rate = item.original_currency === this.pos_profile.currency
+					? item.original_rate
+					: item.original_rate * (item.plc_conversion_rate || this.exchange_rate);
+
+				item.base_rate = base_rate;
+				item.base_price_list_rate = base_rate;
+			}
+
+			// Set final quantity
+			const hasBarcodeQty = item._barcode_qty;
+			if (!item.qty || (item.qty === 1 && !hasBarcodeQty)) {
+				let qtyVal = requestedQty;
+				if (this.hide_qty_decimals) {
+					qtyVal = Math.trunc(qtyVal);
 				}
-
-				const hasBarcodeQty = item._barcode_qty;
-				if (!item.qty || (item.qty === 1 && !hasBarcodeQty)) {
-					let qtyVal = this.qty != null ? this.qty : 1;
-					qtyVal = Math.abs(qtyVal);
-					if (this.hide_qty_decimals) {
-						qtyVal = Math.trunc(qtyVal);
-					}
-					item.qty = qtyVal;
-				}
-				const payload = { ...item };
-				delete payload._barcode_qty;
-				this.eventBus.emit("add_item", payload);
-				this.qty = 1;
+				item.qty = qtyVal;
 			}
 		},
 		async enter_event() {
