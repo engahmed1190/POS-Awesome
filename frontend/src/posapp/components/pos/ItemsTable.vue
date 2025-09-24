@@ -656,6 +656,7 @@
 <script>
 /* global process */
 import _ from "lodash";
+import { parseBooleanSetting } from "../../utils/stock.js";
 export default {
 	name: "ItemsTable",
 	props: {
@@ -746,10 +747,11 @@ export default {
 		},
 
 		blockSaleBeyondAvailableQty() {
-			return (
-				!["Order", "Quotation"].includes(this.invoiceType) &&
-				this.pos_profile.posa_block_sale_beyond_available_qty
-			);
+		if (["Order", "Quotation"].includes(this.invoiceType)) {
+			return false;
+		}
+		const allowNegative = parseBooleanSetting(this.stock_settings?.allow_negative_stock);
+		return !allowNegative && Boolean(this.pos_profile?.posa_block_sale_beyond_available_qty);
 		},
 
 		// Responsive headers based on container size
