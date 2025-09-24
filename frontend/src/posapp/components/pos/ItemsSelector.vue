@@ -1799,7 +1799,7 @@ export default {
 				this.pos_profile,
 				this.stock_settings,
 				this.eventBus,
-				this.pos_profile?.posa_block_sale_beyond_available_qty
+				this.blockSaleBeyondAvailableQty
 			);
 
 			if (!isValid) {
@@ -1948,7 +1948,7 @@ export default {
 					const negativeStockEnabled = this.isNegativeStockEnabled();
 					const shouldBlock =
 						!negativeStockEnabled &&
-						(this.pos_profile?.posa_block_sale_beyond_available_qty || availableQty <= 0);
+						(this.blockSaleBeyondAvailableQty || availableQty <= 0);
 
 					if (shouldBlock || negativeStockEnabled) {
 						const formattedAvailable = this.format_number
@@ -2811,7 +2811,7 @@ export default {
 				const negativeStockEnabled = this.isNegativeStockEnabled();
 				const shouldBlock =
 					!negativeStockEnabled &&
-					(this.pos_profile?.posa_block_sale_beyond_available_qty || availableQty <= 0);
+					(this.blockSaleBeyondAvailableQty || availableQty <= 0);
 
 				if (shouldBlock) {
 					this.showScanError({
@@ -3093,6 +3093,12 @@ export default {
 	},
 
 	computed: {
+		blockSaleBeyondAvailableQty() {
+			return (
+				Boolean(this.pos_profile?.posa_block_sale_beyond_available_qty) &&
+				!this.isNegativeStockEnabled()
+			);
+		},
 		headers() {
 			return this.getItemsHeaders();
 		},

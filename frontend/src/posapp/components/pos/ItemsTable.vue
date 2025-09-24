@@ -746,10 +746,19 @@ export default {
 		},
 
 		blockSaleBeyondAvailableQty() {
-			return (
-				!["Order", "Quotation"].includes(this.invoiceType) &&
-				this.pos_profile.posa_block_sale_beyond_available_qty
-			);
+			if (["Order", "Quotation"].includes(this.invoiceType)) {
+				return false;
+			}
+			const setting = this.stock_settings?.allow_negative_stock;
+			let allowNegative = false;
+			if (typeof setting === 'string') {
+				allowNegative = ['1', 'true', 'yes'].includes(setting.trim().toLowerCase());
+			} else if (typeof setting === 'number') {
+				allowNegative = setting === 1;
+			} else {
+				allowNegative = Boolean(setting);
+			}
+			return !allowNegative && Boolean(this.pos_profile?.posa_block_sale_beyond_available_qty);
 		},
 
 		// Responsive headers based on container size
