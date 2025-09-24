@@ -1,5 +1,7 @@
 /* global flt, __, get_currency_symbol */
 
+import { parseBooleanSetting } from '../../utils/stock.js';
+
 export default {
 	// Calculate total quantity of all items
 	total_qty() {
@@ -92,16 +94,7 @@ export default {
 		if (["Order", "Quotation"].includes(this.invoiceType)) {
 			return false;
 		}
-		const allowNegativeSetting = this.stock_settings?.allow_negative_stock;
-		let allowNegative = false;
-		if (typeof allowNegativeSetting === 'string') {
-			const normalized = allowNegativeSetting.trim().toLowerCase();
-			allowNegative = ['1', 'true', 'yes'].includes(normalized);
-		} else if (typeof allowNegativeSetting === 'number') {
-			allowNegative = allowNegativeSetting === 1;
-		} else {
-			allowNegative = Boolean(allowNegativeSetting);
-		}
+		const allowNegative = parseBooleanSetting(this.stock_settings?.allow_negative_stock);
 		return (
 			!allowNegative &&
 			Boolean(this.pos_profile?.posa_block_sale_beyond_available_qty)

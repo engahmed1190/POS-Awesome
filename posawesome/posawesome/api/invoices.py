@@ -185,14 +185,14 @@ def validate_cart_items(items, pos_profile=None):
     if isinstance(items, str):
         items = json.loads(items)
 
-    errors = _collect_stock_errors(items)
-    if not errors:
-        return []
-
     if pos_profile and not frappe.db.exists("POS Profile", pos_profile):
         pos_profile = None
 
     if not _should_block(pos_profile):
+        return []
+
+    errors = _collect_stock_errors(items)
+    if not errors:
         return []
 
     return errors

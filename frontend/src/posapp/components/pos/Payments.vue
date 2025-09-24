@@ -714,6 +714,7 @@
 /* global frappe, __, get_currency_symbol */
 // Importing format mixin for currency and utility functions
 import format, { formatUtils } from "../../format";
+import { parseBooleanSetting } from "../../utils/stock.js";
 import {
 	saveOfflineInvoice,
 	syncOfflineInvoices,
@@ -782,15 +783,7 @@ export default {
 			if (["Order", "Quotation"].includes(this.invoiceType)) {
 				return false;
 			}
-			const setting = this.stock_settings?.allow_negative_stock;
-			let allowNegative = false;
-			if (typeof setting === 'string') {
-				allowNegative = ['1', 'true', 'yes'].includes(setting.trim().toLowerCase());
-			} else if (typeof setting === 'number') {
-				allowNegative = setting === 1;
-			} else {
-				allowNegative = Boolean(setting);
-			}
+			const allowNegative = parseBooleanSetting(this.stock_settings?.allow_negative_stock);
 			return !allowNegative && Boolean(this.pos_profile?.posa_block_sale_beyond_available_qty);
 		},
 		// Calculate total payments (all methods, loyalty, credit)
