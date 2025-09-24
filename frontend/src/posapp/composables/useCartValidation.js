@@ -74,7 +74,7 @@ export function useCartValidation() {
             // This overrides POS Profile's block setting when negative stock is explicitly allowed
             const allowNegativeStock = parseBooleanSetting(stockSettings?.allow_negative_stock);
             const exceedsAvailable = typeof item.actual_qty === 'number' && requestedQty > item.actual_qty;
-            const blockSale = !allowNegativeStock && (blockSaleBeyondAvailableQty || exceedsAvailable);
+            const blockSale = !allowNegativeStock && exceedsAvailable;
 
             if (blockSale) {
                 if (eventBus) {
@@ -229,7 +229,7 @@ export function useCartValidation() {
 
         // Check if requested quantity exceeds available stock
         const exceedsAvailable = typeof item.actual_qty === 'number' && requestedQty > item.actual_qty;
-        const blockSale = !allowNegativeStock && (blockSaleBeyondAvailableQty || exceedsAvailable);
+        const blockSale = !allowNegativeStock && exceedsAvailable;
         if (blockSale) {
             if (eventBus) {
                 eventBus.emit("show_message", {
