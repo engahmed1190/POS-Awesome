@@ -303,6 +303,9 @@ export default {
 			openCVLoading: false, // Loading state for OpenCV operations
 			isProcessing: false, // Flag to prevent processing queue buildup
 			frameSkipCounter: 0, // Counter for frame skipping
+			processingMode: 'intelligent', // 'intelligent', 'quick', 'full', 'extreme'
+			lastQualityAssessment: null, // Last quality assessment from intelligent processing
+			qualityHistory: [] // Track quality over recent frames
 			// Old properties to be removed or re-evaluated:
 			// qrScanner: null,
 			// flashlightSupported: false, // vue-qrcode-reader handles this via QrcodeStream's torch prop
@@ -355,6 +358,15 @@ export default {
 				return this.opencvTrackFunction;
 			}
 			return null; // Use default vue-qrcode-reader processing
+		},
+		processingModeLabel() {
+			const labels = {
+				intelligent: this.__("Smart Auto"),
+				quick: this.__("Quick"),
+				full: this.__("Full"),
+				extreme: this.__("Extreme")
+			};
+			return labels[this.processingMode] || this.__("Smart Auto");
 		},
 
 		readerFormats() {
@@ -617,8 +629,32 @@ export default {
 
 					const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-					// Apply optimized OpenCV preprocessing
-					const processedImageData = await opencvProcessor.quickProcess(imageData);
+					// Apply OpenCV preprocessing based on selected mode
+				let processedImageData;
+				switch (this.processingMode) {
+					case 'quick':
+						processedImageData = await opencvProcessor.quickProcess(imageData);
+						break;
+					case 'full':
+						processedImageData = await opencvProcessor.fullProcess(imageData);
+						break;
+					case 'extreme':
+						processedImageData = await opencvProcessor.extremeProcess(imageData);
+						break;
+					case 'intelligent':
+					default:
+						processedImageData = await opencvProcessor.intelligentProcess(imageData);
+						// Store quality assessment for display
+						if (opencvProcessor.lastQualityAssessment) {
+							this.lastQualityAssessment = opencvProcessor.lastQualityAssessment;
+							// Keep history of recent quality assessments
+							this.qualityHistory.push(this.lastQualityAssessment);
+							if (this.qualityHistory.length > 10) {
+								this.qualityHistory.shift();
+							}
+						}
+						break;
+				}
 
 					// Update canvas with processed image
 					ctx.putImageData(processedImageData, 0, 0);
@@ -631,6 +667,26 @@ export default {
 					resolve(detectedCodes); // Return original results on error
 				}
 			});
+		},
+
+		setProcessingMode(mode) {
+			this.processingMode = mode;
+			console.log('Processing mode set to:', mode);
+			if (typeof frappe !== "undefined" && frappe.show_alert) {
+				const modeMessages = {
+					intelligent: this.__("Smart Auto mode - Automatically adjusts processing based on image quality"),
+					quick: this.__("Quick mode - Fast processing for good quality images"),
+					full: this.__("Full mode - Enhanced processing for poor quality images"),
+					extreme: this.__("Extreme mode - Maximum enhancement for very poor quality images")
+				};
+				frappe.show_alert(
+					{
+						message: modeMessages[mode],
+						indicator: "blue",
+					},
+					3,
+				);
+			}
 		},
 
 		// Old methods to remove or adapt:

@@ -63,6 +63,24 @@ class OpenCVWorkerManager {
         }
     }
 
+    async processImageExtreme(imageData) {
+        if (!this.initialized) {
+            await this.initialize();
+        }
+
+        if (!this.worker) {
+            throw new Error('OpenCV Worker not available');
+        }
+
+        try {
+            const result = await this._sendMessage('PROCESS_EXTREME', { imageData });
+            return result;
+        } catch (error) {
+            console.error('Error in extreme image processing:', error);
+            throw error;
+        }
+    }
+
     _sendMessage(type, data = null) {
         return new Promise((resolve, reject) => {
             if (!this.worker) {
