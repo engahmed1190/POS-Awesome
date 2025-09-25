@@ -19,8 +19,8 @@ class OpenCVWorkerManager {
 
     async _doInitialize() {
         try {
-            // Create Web Worker using static URL to avoid build issues
-            this.worker = new Worker('/assets/posawesome/posapp/workers/opencvWorker.js', { type: 'module' });
+            // Create Web Worker using static URL to avoid build issues (non-module worker for importScripts compatibility)
+            this.worker = new Worker('/assets/posawesome/dist/js/posapp/workers/opencvWorker.js');
 
             // Set up message handler
             this.worker.onmessage = (e) => {
@@ -28,7 +28,14 @@ class OpenCVWorkerManager {
             };
 
             this.worker.onerror = (error) => {
-                console.error('OpenCV Worker error:', error);
+                console.error('OpenCV Worker error details:', {
+                    message: error.message,
+                    filename: error.filename,
+                    lineno: error.lineno,
+                    colno: error.colno,
+                    error: error.error,
+                    type: error.type
+                });
                 this._rejectAllPendingMessages(error);
             };
 
@@ -77,6 +84,24 @@ class OpenCVWorkerManager {
             return result;
         } catch (error) {
             console.error('Error in extreme image processing:', error);
+            throw error;
+        }
+    }
+
+    async detectBarcodes(imageData, options = {}) {
+        if (!this.initialized) {
+            await this.initialize();
+        }
+
+        if (!this.worker) {
+            throw new Error('OpenCV Worker not available');
+        }
+
+        try {
+            const result = await this._sendMessage('DETECT_BARCODES', { imageData, options });
+            return result;
+        } catch (error) {
+            console.error('Error in barcode detection:', error);
             throw error;
         }
     }

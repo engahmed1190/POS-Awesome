@@ -1,6 +1,7 @@
 // OpenCV Web Worker for non-blocking image processing
 let cv = null;
 let initialized = false;
+let barcodeDetector = null;
 
 // Load OpenCV.js from local bundle
 async function initializeOpenCV() {
@@ -9,8 +10,7 @@ async function initializeOpenCV() {
     }
 
     try {
-        // Load OpenCV.js from local bundle
-        importScripts('/assets/posawesome/libs/opencv.js');
+        console.log('🔄 Setting up OpenCV.js initialization...');
 
         // Wait for OpenCV to be ready
         return new Promise((resolve, reject) => {
@@ -18,23 +18,47 @@ async function initializeOpenCV() {
                 reject(new Error('OpenCV initialization timeout'));
             }, 30000); // 30 second timeout
 
-            const checkCV = () => {
-                if (typeof cv !== 'undefined' && cv && cv.Mat) {
-                    clearTimeout(timeout);
-                    initialized = true;
-                    console.log('OpenCV.js initialized in Web Worker from local bundle');
-                    resolve(cv);
-                } else if (typeof self.cv !== 'undefined' && self.cv && self.cv.Mat) {
-                    cv = self.cv;
-                    clearTimeout(timeout);
-                    initialized = true;
-                    console.log('OpenCV.js initialized in Web Worker from local bundle (global)');
-                    resolve(cv);
-                } else {
-                    setTimeout(checkCV, 100);
+            const handleOpenCVReady = () => {
+                clearTimeout(timeout);
+                initialized = true;
+                // Initialize native barcode detector if available
+                initializeBarcodeDetector();
+                console.log('✅ OpenCV.js fully initialized in Web Worker');
+                resolve(cv);
+            };
+
+            // Set up Module configuration before loading OpenCV
+            self.Module = {
+                onRuntimeInitialized: () => {
+                    console.log('📋 OpenCV runtime initialization callback triggered');
+                    // Give OpenCV a moment to set up the cv object
+                    setTimeout(() => {
+                        if (typeof cv !== 'undefined' && cv && cv.Mat) {
+                            handleOpenCVReady();
+                        } else if (typeof self.cv !== 'undefined' && self.cv && self.cv.Mat) {
+                            cv = self.cv;
+                            handleOpenCVReady();
+                        } else {
+                            console.warn('OpenCV runtime initialized but cv object not found, polling...');
+                            const checkCV = () => {
+                                if (typeof cv !== 'undefined' && cv && cv.Mat) {
+                                    handleOpenCVReady();
+                                } else if (typeof self.cv !== 'undefined' && self.cv && self.cv.Mat) {
+                                    cv = self.cv;
+                                    handleOpenCVReady();
+                                } else {
+                                    setTimeout(checkCV, 50);
+                                }
+                            };
+                            checkCV();
+                        }
+                    }, 100);
                 }
             };
-            checkCV();
+
+            // Load OpenCV.js from local bundle using importScripts
+            importScripts('/assets/posawesome/dist/js/libs/opencv.js');
+            console.log('📁 OpenCV.js script loaded successfully');
         });
     } catch (error) {
         console.error('Failed to load OpenCV.js from local bundle:', error);
@@ -60,6 +84,174 @@ function matToImageData(mat) {
         mat.cols,
         mat.rows
     );
+}
+
+// Initialize OpenCV native barcode detector
+function initializeBarcodeDetector() {
+    try {
+        // Check if OpenCV has barcode detection capabilities
+        if (cv && cv.barcode && cv.barcode.BarcodeDetector) {
+            barcodeDetector = new cv.barcode.BarcodeDetector();
+            console.log('✅ OpenCV native BarcodeDetector initialized successfully');
+            return true;
+        } else {
+            console.log('ℹ️ OpenCV barcode module not available in this build - using fallback processing only');
+            barcodeDetector = null;
+            return false;
+        }
+    } catch (error) {
+        console.warn('⚠️ Failed to initialize OpenCV BarcodeDetector (this is normal for most OpenCV.js builds):', error.message);
+        barcodeDetector = null;
+        return false;
+    }
+}
+
+// Detect and decode barcodes using OpenCV native detector
+function detectAndDecodeBarcodes(mat) {
+    if (!barcodeDetector || !cv) {
+        console.log('ℹ️ Native barcode detection not available, will use fallback image processing');
+        return { detected: false, barcodes: [], error: 'BarcodeDetector not available', fallbackToProcessing: true };
+    }
+
+    try {
+        const decodeInfo = new cv.StringVector();
+        const decodeType = new cv.StringVector();
+        const corners = new cv.PointVector();
+
+        // Use OpenCV's native detectAndDecodeWithType method
+        const detected = barcodeDetector.detectAndDecodeWithType(mat, decodeInfo, decodeType, corners);
+
+        const results = [];
+        if (detected && decodeInfo.size() > 0) {
+            for (let i = 0; i < decodeInfo.size(); i++) {
+                const info = decodeInfo.get(i);
+                const type = decodeType.size() > i ? decodeType.get(i) : 'UNKNOWN';
+
+                // Extract corner points for the barcode
+                const barcodeCorners = [];
+                const startIdx = i * 4; // Each barcode has 4 corner points
+                for (let j = 0; j < 4 && (startIdx + j) < corners.size(); j++) {
+                    const point = corners.get(startIdx + j);
+                    barcodeCorners.push({ x: point.x, y: point.y });
+                }
+
+                results.push({
+                    data: info,
+                    type: type,
+                    corners: barcodeCorners,
+                    confidence: 1.0 // OpenCV doesn't provide confidence, assume high if detected
+                });
+            }
+        }
+
+        // Clean up
+        decodeInfo.delete();
+        decodeType.delete();
+        corners.delete();
+
+        return {
+            detected: results.length > 0,
+            barcodes: results,
+            count: results.length
+        };
+
+    } catch (error) {
+        console.error('Error in OpenCV barcode detection:', error);
+        return { detected: false, barcodes: [], error: error.message };
+    }
+}
+
+// Enhanced barcode detection combining preprocessing + native detection
+function detectBarcodesWithPreprocessing(imageData, options = {}) {
+    if (!initialized || !cv) {
+        throw new Error('OpenCV not initialized');
+    }
+
+    const src = imageDataToMat(imageData);
+    let processed = src.clone();
+    const results = [];
+
+    try {
+        // First try: Native detection on original image
+        console.log('Attempting native barcode detection on original image');
+        let detection = detectAndDecodeBarcodes(src);
+        if (detection.detected) {
+            console.log('Native detection successful on original image:', detection.count, 'barcodes found');
+            results.push(...detection.barcodes.map(b => ({...b, method: 'native_original'})));
+        }
+
+        // Second try: Detection after basic preprocessing
+        if (results.length === 0 || options.forcePreprocessing) {
+            console.log('Applying preprocessing for barcode detection');
+
+            // Convert to grayscale if needed
+            if (processed.channels() > 1) {
+                const gray = new cv.Mat();
+                cv.cvtColor(processed, gray, cv.COLOR_RGBA2GRAY);
+                processed.delete();
+                processed = gray;
+            }
+
+            // Apply CLAHE for contrast enhancement
+            const clahe = cv.createCLAHE(3.0, new cv.Size(8, 8));
+            const enhanced = new cv.Mat();
+            clahe.apply(processed, enhanced);
+            clahe.delete();
+            processed.delete();
+            processed = enhanced;
+
+            // Try detection on preprocessed image
+            detection = detectAndDecodeBarcodes(processed);
+            if (detection.detected) {
+                console.log('Native detection successful after preprocessing:', detection.count, 'barcodes found');
+                results.push(...detection.barcodes.map(b => ({...b, method: 'native_preprocessed'})));
+            }
+        }
+
+        // Third try: Extreme preprocessing for very poor quality
+        if (results.length === 0 && options.useExtremePreprocessing) {
+            console.log('Applying extreme preprocessing for barcode detection');
+            const extremeProcessed = processVeryPoorImage(imageData);
+            const extremeMat = imageDataToMat(extremeProcessed);
+
+            if (extremeMat.channels() > 1) {
+                const gray = new cv.Mat();
+                cv.cvtColor(extremeMat, gray, cv.COLOR_RGBA2GRAY);
+                extremeMat.delete();
+                const extremeDetection = detectAndDecodeBarcodes(gray);
+                if (extremeDetection.detected) {
+                    console.log('Native detection successful after extreme preprocessing:', extremeDetection.count, 'barcodes found');
+                    results.push(...extremeDetection.barcodes.map(b => ({...b, method: 'native_extreme'})));
+                }
+                gray.delete();
+            } else {
+                const extremeDetection = detectAndDecodeBarcodes(extremeMat);
+                if (extremeDetection.detected) {
+                    console.log('Native detection successful after extreme preprocessing:', extremeDetection.count, 'barcodes found');
+                    results.push(...extremeDetection.barcodes.map(b => ({...b, method: 'native_extreme'})));
+                }
+                extremeMat.delete();
+            }
+        }
+
+        // Clean up
+        src.delete();
+        if (processed) processed.delete();
+
+        return {
+            detected: results.length > 0,
+            barcodes: results,
+            count: results.length,
+            detectorAvailable: barcodeDetector !== null
+        };
+
+    } catch (error) {
+        console.error('Error in barcode detection with preprocessing:', error);
+        // Clean up on error
+        if (src) src.delete();
+        if (processed) processed.delete();
+        throw error;
+    }
 }
 
 // Extreme quality enhancement for very poor images
@@ -469,6 +661,17 @@ self.onmessage = async function(e) {
                     id,
                     type: 'PROCESS_SUCCESS',
                     data: extremeProcessedData
+                });
+                break;
+
+            case 'DETECT_BARCODES':
+                // Native OpenCV barcode detection
+                const { imageData: barcodeImageData, options: barcodeOptions } = data;
+                const barcodeResults = await detectBarcodesWithPreprocessing(barcodeImageData, barcodeOptions || {});
+                self.postMessage({
+                    id,
+                    type: 'BARCODE_DETECTION_SUCCESS',
+                    data: barcodeResults
                 });
                 break;
 

@@ -305,17 +305,10 @@ export default {
 			frameSkipCounter: 0, // Counter for frame skipping
 			processingMode: 'intelligent', // 'intelligent', 'quick', 'full', 'extreme'
 			lastQualityAssessment: null, // Last quality assessment from intelligent processing
-			qualityHistory: [] // Track quality over recent frames
-			// Old properties to be removed or re-evaluated:
-			// qrScanner: null,
-			// flashlightSupported: false, // vue-qrcode-reader handles this via QrcodeStream's torch prop
-			// flashlightOn: false, // replaced by torchActive
-			// multipleCameras: false, // Handled by checking cameras.length
-			// currentCameraId: null, // replaced by selectedDeviceId
-			// availableCameras: [], // replaced by cameras
-			// barcodeDetectionInterval: null,
-			// isDecodingBarcode: false,
-			// videoStream: null
+			qualityHistory: [], // Track quality over recent frames
+			useNativeBarcodeDetection: true, // Try OpenCV native barcode detection first
+			nativeBarcodeAttempts: 0, // Track native detection attempts
+			barcodeDetectionResults: null // Store latest barcode detection results
 		};
 	},
 

@@ -6,6 +6,7 @@ class OpenCVProcessor {
         this.initPromise = null;
         this.workerManager = opencvWorkerManager;
         this.lastQualityAssessment = null;
+        this.fallbackMode = false;
     }
 
     async init() {
@@ -21,11 +22,14 @@ class OpenCVProcessor {
         try {
             await this.workerManager.initialize();
             this.initialized = true;
-            console.log('OpenCV Processor with Web Worker initialized successfully');
+            console.log('✅ OpenCV Processor with Web Worker initialized successfully');
             return true;
         } catch (error) {
-            console.error('Failed to initialize OpenCV Processor:', error);
+            console.error('❌ Failed to initialize OpenCV Processor:', error);
+            console.log('🔄 Falling back to non-worker mode (image processing disabled)');
             this.initialized = false;
+            // Set a flag to indicate fallback mode
+            this.fallbackMode = true;
             return false;
         }
     }
@@ -41,8 +45,8 @@ class OpenCVProcessor {
      * Optimized preprocessing for fast and accurate real-time scanning using Web Worker
      */
     async quickProcess(imageData) {
-        if (!await this.ensureInitialized()) {
-            console.warn('OpenCV Worker not initialized, skipping processing');
+        if (!await this.ensureInitialized() || this.fallbackMode) {
+            console.warn('📷 OpenCV Worker not available, returning original image');
             return imageData;
         }
 
@@ -70,8 +74,8 @@ class OpenCVProcessor {
      * Full preprocessing pipeline for difficult barcodes using Web Worker
      */
     async fullProcess(imageData) {
-        if (!await this.ensureInitialized()) {
-            console.warn('OpenCV Worker not initialized, skipping processing');
+        if (!await this.ensureInitialized() || this.fallbackMode) {
+            console.warn('📷 OpenCV Worker not available, returning original image');
             return imageData;
         }
 
@@ -100,8 +104,8 @@ class OpenCVProcessor {
      * Extreme processing for very poor quality images
      */
     async extremeProcess(imageData) {
-        if (!await this.ensureInitialized()) {
-            console.warn('OpenCV Worker not initialized, skipping processing');
+        if (!await this.ensureInitialized() || this.fallbackMode) {
+            console.warn('📷 OpenCV Worker not available, returning original image');
             return imageData;
         }
 
@@ -119,8 +123,10 @@ class OpenCVProcessor {
      * Intelligent processing that automatically detects quality level
      */
     async intelligentProcess(imageData) {
-        if (!await this.ensureInitialized()) {
-            console.warn('OpenCV Worker not initialized, skipping processing');
+        if (!await this.ensureInitialized() || this.fallbackMode) {
+            console.warn('📷 OpenCV Worker not available, returning original image');
+            // Still do a basic quality assessment for display purposes
+            this.lastQualityAssessment = this.assessImageQuality(imageData);
             return imageData;
         }
 
@@ -151,7 +157,7 @@ class OpenCVProcessor {
      * Simple image quality assessment
      */
     assessImageQuality(imageData) {
-        const { data, width, height } = imageData;
+        const { data, width } = imageData;
 
         // Calculate basic statistics
         let sum = 0;
@@ -201,6 +207,72 @@ class OpenCVProcessor {
             recommendation: level === 'very_poor' ? 'Use extreme processing' :
                            level === 'poor' ? 'Use full processing' : 'Use quick processing'
         };
+    }
+
+    /**
+     * Native OpenCV barcode detection with preprocessing
+     */
+    async detectBarcodes(imageData, options = {}) {
+        if (!await this.ensureInitialized()) {
+            console.warn('OpenCV Worker not initialized, skipping barcode detection');
+            return { detected: false, barcodes: [], error: 'OpenCV not initialized' };
+        }
+
+        try {
+            console.log('Using OpenCV native barcode detection');
+            const barcodeResults = await this.workerManager.detectBarcodes(imageData, {
+                forcePreprocessing: options.forcePreprocessing || false,
+                useExtremePreprocessing: options.useExtremePreprocessing || true,
+                ...options
+            });
+
+            return barcodeResults;
+        } catch (error) {
+            console.error('Error in OpenCV native barcode detection:', error);
+            return { detected: false, barcodes: [], error: error.message };
+        }
+    }
+
+    /**
+     * Hybrid detection: Try native barcode detection first, fallback to enhanced processing + external detection
+     */
+    async hybridBarcodeDetection(imageData, options = {}) {
+        if (!await this.ensureInitialized()) {
+            console.warn('OpenCV Worker not initialized, skipping hybrid detection');
+            return { detected: false, barcodes: [], method: 'none' };
+        }
+
+        try {
+            // First attempt: Native OpenCV barcode detection
+            console.log('Attempting native OpenCV barcode detection...');
+            const nativeResults = await this.detectBarcodes(imageData, options);
+
+            if (nativeResults.detected && nativeResults.barcodes.length > 0) {
+                console.log('Native barcode detection successful:', nativeResults.barcodes.length, 'barcodes found');
+                return {
+                    ...nativeResults,
+                    method: 'native_opencv',
+                    processedImageData: null // Native detection doesn't return processed image
+                };
+            }
+
+            // Fallback: Enhanced image processing for external barcode libraries
+            console.log('Native detection failed, applying enhanced processing for external libraries...');
+            const processedImageData = await this.intelligentProcess(imageData);
+
+            return {
+                detected: false,
+                barcodes: [],
+                method: 'processed_for_external',
+                processedImageData: processedImageData,
+                nativeAttempted: true,
+                nativeAvailable: nativeResults.detectorAvailable
+            };
+
+        } catch (error) {
+            console.error('Error in hybrid barcode detection:', error);
+            return { detected: false, barcodes: [], method: 'error', error: error.message };
+        }
     }
 
     /**
