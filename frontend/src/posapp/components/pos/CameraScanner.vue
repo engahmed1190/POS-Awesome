@@ -1,5 +1,5 @@
 <template>
-  <v-dialog
+<v-dialog
     v-model="scannerDialog"
     max-width="520px"
     persistent="false"
@@ -193,7 +193,7 @@ export default {
       type: String,
       default: "Both", // 'QR Code', 'Barcode', 'Both'
     },
-    // from scanner-enhancement-item-selector
+    // optional: auto close dialog after a successful scan
     autoCloseOnScan: {
       type: Boolean,
       default: false,
@@ -211,12 +211,12 @@ export default {
       torchActive: false,
       selectedDeviceId: null,
       cameras: [],
-      // enhancement: OpenCV controls
+      // OpenCV controls
       openCVEnabled: true,
       openCVLoading: false,
       isProcessing: false,
       frameSkipCounter: 0,
-      // timers + external lock (from scanner-enhancement-item-selector)
+      // timers + external lock
       scanResetTimeoutId: null,
       dialogCloseTimeoutId: null,
       scannerLockedExternally: false,
@@ -317,7 +317,7 @@ export default {
       }
     },
 
-    // unified detect handler (keeps external-lock + auto-close behavior)
+    // unified detect handler (auto-close + timers)
     onDetect(detectedCodes) {
       if (detectedCodes && detectedCodes.length > 0) {
         const first = detectedCodes[0];
