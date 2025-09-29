@@ -211,8 +211,8 @@ export default {
       torchActive: false,
       selectedDeviceId: null,
       cameras: [],
-      // OpenCV controls
-      openCVEnabled: true,
+      // OpenCV controls (disabled by default until user opts in)
+      openCVEnabled: false,
       openCVLoading: false,
       isProcessing: false,
       frameSkipCounter: 0,
@@ -467,16 +467,25 @@ export default {
 
     async toggleOpenCVProcessing() {
       this.openCVLoading = true;
-      this.openCVEnabled = !this.openCVEnabled;
+      const enable = !this.openCVEnabled;
 
-      if (this.openCVEnabled) {
+      if (enable) {
         try {
           await opencvProcessor.ensureInitialized();
           console.log("OpenCV processing enabled");
+          this.openCVEnabled = true;
         } catch (error) {
           console.error("Failed to initialize OpenCV:", error);
           this.openCVEnabled = false;
         }
+      } else {
+        try {
+          await opencvProcessor.destroy();
+          console.log("OpenCV processing disabled and worker terminated");
+        } catch (error) {
+          console.warn("Failed to shut down OpenCV worker cleanly:", error);
+        }
+        this.openCVEnabled = false;
       }
 
       this.isScanning = false;
@@ -570,17 +579,9 @@ export default {
     },
   },
 
-  async mounted() {
+  mounted() {
     if (typeof document !== "undefined") {
       document.addEventListener("keydown", this.handleEscKey);
-    }
-    // Initialize OpenCV
-    try {
-      await opencvProcessor.ensureInitialized();
-      console.log("OpenCV initialized in CameraScanner component");
-    } catch (error) {
-      console.warn("OpenCV initialization failed:", error);
-      this.openCVEnabled = false;
     }
   },
 

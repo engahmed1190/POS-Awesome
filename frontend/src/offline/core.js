@@ -1,5 +1,11 @@
 import Dexie from "dexie/dist/dexie.mjs";
 import { withWriteLock } from "./db-utils.js";
+import {
+	getPersistWorker,
+	initPersistWorker as ensurePersistWorker,
+} from "./persistWorkerManager.js";
+
+export { initPersistWorker, terminatePersistWorker } from "./persistWorkerManager.js";
 
 // --- Dexie initialization ---------------------------------------------------
 export const db = new Dexie("posawesome_offline");
@@ -88,38 +94,8 @@ export async function checkDbHealth() {
 	}
 }
 
-let persistWorker = null;
-
-export function initPersistWorker() {
-	if (persistWorker || typeof Worker === "undefined") return;
-	try {
-		// Load the worker without a query string so the service worker
-		// can serve the cached version when offline.
-		const workerUrl = "/assets/posawesome/dist/js/posapp/workers/itemWorker.js";
-		try {
-			persistWorker = new Worker(workerUrl, { type: "classic" });
-		} catch {
-			persistWorker = new Worker(workerUrl, { type: "module" });
-		}
-	} catch (e) {
-		console.error("Failed to init persist worker", e);
-		persistWorker = null;
-	}
-}
-
-export function terminatePersistWorker() {
-	if (persistWorker) {
-		try {
-			persistWorker.terminate();
-		} catch (e) {
-			console.error("Failed to terminate persist worker", e);
-		}
-		persistWorker = null;
-	}
-}
-
 // Initialize worker immediately
-initPersistWorker();
+ensurePersistWorker();
 
 // Persist queue for batching operations
 const persistQueue = {};
@@ -147,7 +123,8 @@ function flushPersistQueue() {
 export function persist(key, value) {
 	// Run health check in background; ignore errors
 	checkDbHealth().catch(() => {});
-	if (persistWorker) {
+	const worker = getPersistWorker() || ensurePersistWorker();
+	if (worker) {
 		let cleanValue = value;
 		try {
 			cleanValue =
@@ -158,7 +135,7 @@ export function persist(key, value) {
 			console.error("Failed to serialize", key, e);
 		}
 		try {
-			persistWorker.postMessage({ type: "persist", key, value: cleanValue });
+			worker.postMessage({ type: "persist", key, value: cleanValue });
 		} catch (e) {
 			console.error(`Failed to postMessage for ${key}`, e);
 		}

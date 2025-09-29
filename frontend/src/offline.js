@@ -1,20 +1,14 @@
 import Dexie from "dexie/dist/dexie.mjs";
+import {
+	initPersistWorker as ensurePersistWorker,
+	getPersistWorker,
+} from "./offline/persistWorkerManager.js";
 
 // --- Dexie initialization ---------------------------------------------------
 const db = new Dexie("posawesome_offline");
 db.version(1).stores({ keyval: "&key" });
 
-let persistWorker = null;
-if (typeof Worker !== "undefined") {
-	try {
-		// Use the plain URL so the service worker cache matches when offline
-		const workerUrl = "/assets/posawesome/dist/js/posapp/workers/itemWorker.js";
-		persistWorker = new Worker(workerUrl, { type: "classic" });
-	} catch (e) {
-		console.error("Failed to init persist worker", e);
-		persistWorker = null;
-	}
-}
+ensurePersistWorker();
 
 // Add stock_cache_ready flag to memory object
 const memory = {
@@ -132,14 +126,15 @@ export const initPromise = new Promise((resolve) => {
 });
 
 function persist(key) {
-	if (persistWorker) {
+	const worker = getPersistWorker() || ensurePersistWorker();
+	if (worker) {
 		let clean = memory[key];
 		try {
 			clean = JSON.parse(JSON.stringify(memory[key]));
 		} catch (e) {
 			console.error("Failed to serialize", key, e);
 		}
-		persistWorker.postMessage({ type: "persist", key, value: clean });
+		worker.postMessage({ type: "persist", key, value: clean });
 		return;
 	}
 	db.table("keyval")
